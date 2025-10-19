@@ -1,0 +1,40 @@
+:root {
+  --daw-primary: #5a56f6;
+  --daw-primary-strong: #3f3ad8;
+  --daw-accent: #f78ac8;
+  --daw-accent-strong: #ef5ea5;
+  --daw-background: #f7f7fb;
+  --daw-surface: #ffffff;
+  --daw-surface-muted: #f0f1ff;
+  --daw-overlay: rgba(15, 23, 42, 0.65);
+  --daw-border: rgba(94, 92, 230, 0.18);
+  --daw-text: #0f172a;
+  --daw-text-muted: #475569;
+  --daw-text-secondary: #64748b;
+  --daw-success: #22c55e;
+  --daw-warning: #facc15;
+  --daw-danger: #ef4444;
+  --daw-radius-lg: 32px;
+  --daw-radius-md: 20px;
+  --daw-radius-sm: 12px;
+  --daw-gradient: linear-gradient(135deg, rgba(92, 92, 241, 0.96) 0%, rgba(247, 138, 200, 0.9) 100%);
+  --daw-gradient-soft: linear-gradient(135deg, rgba(236, 233, 255, 0.95) 0%, rgba(255, 242, 250, 0.95) 100%);
+  --daw-shadow-lg: 0 32px 70px -40px rgba(88, 82, 246, 0.65);
+  --daw-shadow-md: 0 18px 48px -25px rgba(88, 82, 246, 0.3);
+  --daw-shadow-sm: 0 12px 30px -20px rgba(88, 82, 246, 0.25);
+  --daw-transition: all 0.2s ease-in-out;
+}
+
+.dark-theme {
+  color-scheme: dark;
+  --daw-background: #0b1020;
+  --daw-surface: rgba(15, 23, 42, 0.64);
+  --daw-surface-muted: rgba(23, 32, 52, 0.9);
+  --daw-border: rgba(148, 163, 184, 0.12);
+  --daw-text: #f3f4f6;
+  --daw-text-muted: #cbd5f5;
+  --daw-text-secondary: #94a3b8;
+  --daw-shadow-lg: 0 30px 60px -25px rgba(23, 32, 52, 0.6);
+  --daw-shadow-md: 0 18px 45px -20px rgba(23, 32, 52, 0.55);
+  --daw-shadow-sm: 0 12px 24px -10px rgba(23, 32, 52, 0.5);
+}
