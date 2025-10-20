@@ -1,1 +1,0 @@
-import{bL as n}from"./index-bpa48Sxk.js";function r(){return n.get("/x-config")}function s(e){return n.put("/x-config",e)}function u(e=[]){return n.delete("/x-config",{data:{keys:e}})}function f(e,t){return n.post(`/x-news/${encodeURIComponent(e)}`,t)}function i(e){return n.delete(`/x-news/${encodeURIComponent(e)}`)}export{i as a,u as d,r as g,f as s,s as u};

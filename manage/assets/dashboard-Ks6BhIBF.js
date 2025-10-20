@@ -1,1 +1,0 @@
-import{bL as e}from"./index-bpa48Sxk.js";function r(t={}){return e.get("/dashboard/bill",{params:t})}function s(t={}){return e.get("/dashboard/logs",{params:t})}function o(){return e.get("/dashboard/news")}function n(t){return e.get("/dashboard/live",{headers:{Authorization:`Bearer ${t}`}})}export{o as a,n as b,s as c,r as g};
