@@ -423,8 +423,19 @@ async function saveConfig() {
     const updates = {};
     Object.entries(formData.value).forEach(([key, value]) => {
       if (value && value.trim()) {
-        // 尝试解析 JSON 格式的字段
-        if ((key === 'MODEL_LIMITS' || key === 'PRICING') && value.trim().startsWith('{')) {
+        // MODEL_LIMITS 字段必须使用 JSON.stringify
+        if (key === 'MODEL_LIMITS') {
+          try {
+            // 先解析验证 JSON 格式是否正确
+            const parsed = JSON.parse(value);
+            // 然后转为字符串传递给后端
+            updates[key] = JSON.stringify(parsed);
+          } catch {
+            updates[key] = value;
+          }
+        }
+        // 尝试解析其他 JSON 格式的字段
+        else if (key === 'PRICING' && value.trim().startsWith('{')) {
           try {
             updates[key] = JSON.parse(value);
           } catch {
