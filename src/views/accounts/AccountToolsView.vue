@@ -32,6 +32,63 @@
           </n-button>
         </div>
       </div>
+
+      <!-- 筛选条件 -->
+      <n-divider style="margin: 20px 0" />
+      <div class="filter-section">
+        <div class="filter-row">
+          <div class="filter-item">
+            <span class="filter-label">Level 筛选</span>
+            <n-input-number
+              v-model:value="filterForm.level"
+              :min="0"
+              :max="9"
+              placeholder="0-9"
+              clearable
+              style="width: 120px"
+            />
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">特殊过滤器</span>
+            <n-input
+              v-model:value="filterForm.identifier"
+              placeholder="L2, G1, R3, T2, F1.5, .1.42., email等"
+              clearable
+              style="width: 320px"
+            >
+              <template #suffix>
+                <n-popover trigger="hover" placement="top">
+                  <template #trigger>
+                    <n-icon style="cursor: help"><InformationCircleOutline /></n-icon>
+                  </template>
+                  <div style="max-width: 300px">
+                    <p style="margin: 0 0 8px 0; font-weight: 600">支持的特殊过滤器:</p>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem">
+                      <li>L{n} - 按 Level 筛选 (如: L2)</li>
+                      <li>G{n} - 按 Gear 筛选 (如: G1)</li>
+                      <li>R{n} - 按 Role 筛选 (如: R3)</li>
+                      <li>T{n} - 按 Tier 筛选 (如: T2)</li>
+                      <li>F{n} - 按 Factor 筛选 (如: F1.5)</li>
+                      <li>.{dna} - 按 DNA 路径筛选 (如: .1.42.)</li>
+                      <li>{email} - 按邮箱筛选</li>
+                      <li>{id} - 按 ID 筛选</li>
+                      <li>{name} - 按用户名筛选</li>
+                    </ul>
+                  </div>
+                </n-popover>
+              </template>
+            </n-input>
+          </div>
+          <div class="filter-buttons">
+            <n-button type="primary" @click="applyFilters" :loading="loading">
+              应用筛选
+            </n-button>
+            <n-button @click="resetFilters">
+              重置
+            </n-button>
+          </div>
+        </div>
+      </div>
     </n-card>
 
     <!-- 账户列表 -->
@@ -404,6 +461,20 @@
             <template #suffix>USD</template>
           </n-input-number>
         </n-form-item>
+        <n-form-item label="有效期" required>
+          <n-input-number
+            v-model:value="creditForm.days"
+            :min="1"
+            :step="1"
+            style="width: 100%"
+            placeholder="充值有效期天数"
+          >
+            <template #suffix>天</template>
+          </n-input-number>
+          <template #feedback>
+            <span style="font-size: 0.85rem; color: var(--daw-text-secondary)">充值金额将在指定天数后过期，默认365天（1年）</span>
+          </template>
+        </n-form-item>
         <n-form-item label="备注">
           <n-input
             v-model:value="creditForm.memo"
@@ -414,7 +485,7 @@
         </n-form-item>
         <n-alert type="info" :show-icon="false" style="margin-top: 12px">
           <template v-if="creditForm.amount > 0">
-            本次操作将为账户充值 <strong>{{ formatCurrency(creditForm.amount) }}</strong>
+            本次操作将为账户充值 <strong>{{ formatCurrency(creditForm.amount) }}</strong>，有效期 <strong>{{ creditForm.days }} 天</strong>
           </template>
           <template v-else-if="creditForm.amount < 0">
             本次操作将从账户扣减 <strong>{{ formatCurrency(Math.abs(creditForm.amount)) }}</strong>
@@ -624,6 +695,7 @@ import {
   NTabs,
   NTabPane,
   NDynamicTags,
+  NPopover,
   useMessage,
 } from 'naive-ui';
 import {
@@ -639,6 +711,7 @@ import {
   SwapHorizontalOutline,
   GitNetworkOutline,
   ArrowForwardOutline,
+  InformationCircleOutline,
 } from '@vicons/ionicons5';
 import {
   createUser,
@@ -662,6 +735,13 @@ const accounts = ref([]);
 const loading = ref(false);
 const submitting = ref(false);
 const searchKeyword = ref('');
+const totalCount = ref(0);
+
+// 筛选条件
+const filterForm = ref({
+  level: null,
+  identifier: '', // 支持特殊路径过滤器 (L{n}, G{n}, R{n}, T{n}, F{n}, .{dna})
+});
 
 // 模态框状态
 const createModalVisible = ref(false);
@@ -716,17 +796,31 @@ const initialEditForm = ref({});
 const creditForm = ref({
   amount: 10,
   memo: '',
+  days: 365, // 默认有效期365天（1年）
 });
 
 // 分页配置
-const pagination = ref({
-  page: 1,
-  pageSize: 20,
+const pagination = computed(() => ({
+  page: currentPage.value,
+  pageSize: pageSize.value,
+  itemCount: totalCount.value,
   showSizePicker: true,
   pageSizes: [10, 20, 50, 100],
   showQuickJumper: true,
   prefix: ({ itemCount }) => `共 ${itemCount} 条`,
-});
+  onUpdatePage: (page) => {
+    currentPage.value = page;
+    refreshList();
+  },
+  onUpdatePageSize: (size) => {
+    pageSize.value = size;
+    currentPage.value = 1;
+    refreshList();
+  },
+}));
+
+const currentPage = ref(1);
+const pageSize = ref(20);
 
 // 计算账户余额（累加CreditBalance数组的balance）
 function calculateBalance(account) {
@@ -891,7 +985,7 @@ const columns = [
   },
 ];
 
-// 过滤后的账户列表
+// 过滤后的账户列表（仅用于本地搜索关键词）
 const filteredAccounts = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase();
   if (!keyword) return accounts.value;
@@ -899,9 +993,13 @@ const filteredAccounts = computed(() => {
   return accounts.value.filter((account) => {
     const searchText = [
       account.id?.toString(),
+      account.ID?.toString(),
       account.name,
+      account.Name,
       account.email,
+      account.Email,
       account.alias,
+      account.Alias,
     ]
       .filter(Boolean)
       .join(' ')
@@ -930,14 +1028,64 @@ async function fetchParentLimits() {
 async function refreshList() {
   loading.value = true;
   try {
-    const response = await getDescendants({ size: 500 });
-    accounts.value = response.data.users || response.data || [];
+    const params = {
+      page: currentPage.value,
+      size: pageSize.value,
+    };
+
+    // 如果有 level 筛选
+    if (filterForm.value.level !== null && filterForm.value.level !== undefined && filterForm.value.level !== '') {
+      params.level = filterForm.value.level;
+    }
+
+    // 支持特殊路径过滤器
+    let endpoint = '/x-dna';
+    if (filterForm.value.identifier && filterForm.value.identifier.trim()) {
+      const identifier = filterForm.value.identifier.trim();
+      // 使用路径参数方式调用，支持 L{n}, G{n}, R{n}, T{n}, F{n}, .{dna} 等特殊过滤器
+      const response = await getDescendant(identifier);
+      // 如果使用了特殊路径过滤器，返回的可能是单个用户或用户列表
+      if (response.data.users) {
+        accounts.value = response.data.users || [];
+        totalCount.value = response.data.total || accounts.value.length;
+      } else if (Array.isArray(response.data)) {
+        accounts.value = response.data;
+        totalCount.value = response.data.length;
+      } else {
+        // 单个用户
+        accounts.value = [response.data];
+        totalCount.value = 1;
+      }
+    } else {
+      // 普通列表查询
+      const response = await getDescendants(params);
+      accounts.value = response.data.users || response.data || [];
+      totalCount.value = response.data.total || accounts.value.length;
+    }
   } catch (error) {
     const errorMessage = error?.response?.data?.message || error?.message || '获取子账户列表失败';
     message.error(errorMessage);
+    accounts.value = [];
+    totalCount.value = 0;
   } finally {
     loading.value = false;
   }
+}
+
+// 重置筛选条件
+function resetFilters() {
+  filterForm.value = {
+    level: null,
+    identifier: '',
+  };
+  currentPage.value = 1;
+  refreshList();
+}
+
+// 应用筛选条件
+function applyFilters() {
+  currentPage.value = 1;
+  refreshList();
 }
 
 // 打开创建模态框
@@ -1029,6 +1177,7 @@ function openCreditModal(account) {
   creditForm.value = {
     amount: 10,
     memo: '',
+    days: 365, // 默认有效期365天（1年）
   };
   creditModalVisible.value = true;
 }
@@ -1342,11 +1491,16 @@ async function handleCredit() {
     message.error('请输入调整额度');
     return;
   }
+  if (!creditForm.value.days || creditForm.value.days < 1) {
+    message.error('请输入有效的有效期天数');
+    return;
+  }
 
   submitting.value = true;
   try {
     const payload = {
       CreditGranted: Number(creditForm.value.amount) || 0,
+      Days: Number(creditForm.value.days) || 365,
     };
     if (creditForm.value.memo) {
       payload.Memo = creditForm.value.memo.trim();
@@ -1462,6 +1616,39 @@ function closeCreateResultModal() {
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.filter-section {
+  margin-top: 4px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 0.9rem;
+  color: var(--daw-text-secondary);
+  font-weight: 500;
+}
+
+.filter-row .n-form-item {
+  margin-bottom: 0;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .action-buttons {

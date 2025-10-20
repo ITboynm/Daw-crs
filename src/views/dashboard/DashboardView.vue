@@ -106,6 +106,49 @@
                 :fill-border-radius="4"
               />
             </div>
+
+            <!-- 充值卡明细 -->
+            <div v-if="validCreditBalance.length > 0" class="credit-balance-section">
+              <div class="section-header">
+                <span class="section-title">充值卡明细（有效期内）</span>
+                <div class="credit-header-right">
+                  <span class="credit-total">
+                    总计: <strong>{{ formatCurrency(totalValidCredit, { scientific: true }) }}</strong>
+                  </span>
+                  <n-button
+                    v-if="validCreditBalance.length > 3"
+                    text
+                    size="small"
+                    @click="toggleCreditExpanded"
+                    class="toggle-credit-btn"
+                  >
+                    {{ isCreditExpanded ? '收起' : `展开全部 (${validCreditBalance.length})` }}
+                    <template #icon>
+                      <n-icon>
+                        <component :is="isCreditExpanded ? ChevronUpOutline : ChevronDownOutline" />
+                      </n-icon>
+                    </template>
+                  </n-button>
+                </div>
+              </div>
+              <div class="credit-balance-list">
+                <div v-for="(credit, idx) in displayedCreditBalance" :key="idx" class="credit-balance-item">
+                  <div class="credit-amount">
+                    <span class="amount-label">余额</span>
+                    <span class="amount-value">{{ formatCurrency(credit.balance || 0, { scientific: true }) }}</span>
+                  </div>
+                  <div class="credit-expires">
+                    <span class="expires-label">到期时间</span>
+                    <span class="expires-value" :class="{ 'expires-warning': credit.isExpiringSoon }">
+                      {{ formatDateTime(credit.expires_at, 'YYYY-MM-DD HH:mm') }}
+                    </span>
+                    <span v-if="credit.remainingText" class="expires-remaining" :class="{ 'warning': credit.isExpiringSoon }">
+                      {{ credit.remainingText }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -410,6 +453,8 @@ import {
   EyeOutline,
   EyeOffOutline,
   ArrowForwardOutline,
+  ChevronDownOutline,
+  ChevronUpOutline,
 } from '@vicons/ionicons5';
 import { useAuthStore } from '@/store/auth';
 import { useNotifications } from '@/composables/useNotifications';
@@ -449,6 +494,7 @@ const copyConfirmed = ref(false);
 const editDailyLimitModalVisible = ref(false);
 const editDailyLimitForm = ref({ dailyLimit: 0 });
 const submittingDailyLimit = ref(false);
+const isCreditExpanded = ref(false);
 
 const POLL_INTERVAL = 2 * 60 * 60 * 1000; // 2小时
 let pollTimer = null;
@@ -947,6 +993,51 @@ const isConfirmInputValid = computed(() => {
 
 const lastUpdatedText = computed(() => (lastUpdated.value ? formatDateTime(lastUpdated.value, 'YYYY-MM-DD HH:mm') : '尚未刷新'));
 
+// 有效期内的充值卡明细
+const validCreditBalance = computed(() => {
+  const creditBalance = selfUsage.value?.credit_balance || selfUsage.value?.CreditBalance || [];
+  if (!Array.isArray(creditBalance)) return [];
+
+  const now = new Date();
+  return creditBalance
+    .filter(credit => {
+      const expiresAt = credit.expires_at || credit.ExpiresAt;
+      if (!expiresAt) return false;
+      return new Date(expiresAt) > now;
+    })
+    .map(credit => {
+      const expiresAt = credit.expires_at || credit.ExpiresAt;
+      const balance = credit.balance || credit.Balance || 0;
+      const remainingText = diffFromNow(expiresAt);
+
+      // 判断是否即将过期（7天内）
+      const expiresDate = new Date(expiresAt);
+      const daysUntilExpiry = (expiresDate - now) / (1000 * 60 * 60 * 24);
+      const isExpiringSoon = daysUntilExpiry <= 7;
+
+      return {
+        balance,
+        expires_at: expiresAt,
+        remainingText,
+        isExpiringSoon,
+      };
+    })
+    .sort((a, b) => new Date(a.expires_at) - new Date(b.expires_at)); // 按到期时间排序
+});
+
+// 有效期内总额度
+const totalValidCredit = computed(() => {
+  return validCreditBalance.value.reduce((sum, credit) => sum + credit.balance, 0);
+});
+
+// 显示的充值卡明细（根据展开状态）
+const displayedCreditBalance = computed(() => {
+  if (isCreditExpanded.value || validCreditBalance.value.length <= 3) {
+    return validCreditBalance.value;
+  }
+  return validCreditBalance.value.slice(0, 3);
+});
+
 function loadDismissedNews() {
   try {
     const raw = localStorage.getItem('dawapi:news-dismissed');
@@ -1163,6 +1254,10 @@ function finishRotation() {
 
 function goTo(name) {
   router.push({ name }).catch(() => {});
+}
+
+function toggleCreditExpanded() {
+  isCreditExpanded.value = !isCreditExpanded.value;
 }
 
 function openEditDailyLimitModal() {
@@ -1487,6 +1582,138 @@ async function handleUpdateDailyLimit() {
 
 .edit-limit-button {
   flex-shrink: 0;
+}
+
+/* Credit Balance Section */
+.credit-balance-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.credit-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.credit-total {
+  font-size: 0.85rem;
+  color: var(--daw-text-secondary);
+}
+
+.credit-total strong {
+  color: var(--daw-primary);
+  font-weight: 700;
+}
+
+.toggle-credit-btn {
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: rgba(90, 86, 246, 0.08);
+  color: var(--daw-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(90, 86, 246, 0.15);
+}
+
+.toggle-credit-btn:hover {
+  background: rgba(90, 86, 246, 0.12);
+  border-color: rgba(90, 86, 246, 0.25);
+  transform: translateY(-1px);
+}
+
+.toggle-credit-btn:active {
+  transform: translateY(0);
+}
+
+.credit-balance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.credit-balance-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.credit-balance-item:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 2px 8px rgba(90, 86, 246, 0.08);
+  border-color: rgba(90, 86, 246, 0.2);
+}
+
+.credit-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.amount-label {
+  font-size: 0.7rem;
+  color: var(--daw-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.amount-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--daw-primary);
+}
+
+.credit-expires {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.expires-label {
+  font-size: 0.7rem;
+  color: var(--daw-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.expires-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--daw-text-primary);
+}
+
+.expires-value.expires-warning {
+  color: #f59e0b;
+}
+
+.expires-remaining {
+  font-size: 0.75rem;
+  color: var(--daw-text-secondary);
+  padding: 2px 8px;
+  background: rgba(226, 232, 240, 0.4);
+  border-radius: 6px;
+}
+
+.expires-remaining.warning {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  font-weight: 600;
 }
 
 .key-value {
