@@ -1093,6 +1093,12 @@ async function handleUpdate() {
 
   const payload = {};
 
+  // Name 字段必传,不进入变动校验
+  const accountName = currentAccount.value.Name || currentAccount.value.name;
+  if (accountName) {
+    payload.Name = accountName;
+  }
+
   // 辅助函数：对比两个数组是否相同
   const arraysEqual = (a, b) => {
     if (a.length !== b.length) return false;
@@ -1197,36 +1203,36 @@ async function handleUpdate() {
     payload.TPD = Number(editForm.value.tpd);
   }
 
-  // 访问控制（数组类型） - 只有修改过的才添加
+  // 访问控制（数组类型） - 转为逗号分隔的字符串格式
   if (!arraysEqual(editForm.value.allowIPsList, initialEditForm.value.allowIPsList) && editForm.value.allowIPsList?.length) {
-    payload.AllowIPs = editForm.value.allowIPsList;
+    payload.AllowIPs = editForm.value.allowIPsList.join(',');
   }
   if (!arraysEqual(editForm.value.allowModelsList, initialEditForm.value.allowModelsList) && editForm.value.allowModelsList?.length) {
-    payload.AllowModels = editForm.value.allowModelsList;
+    payload.AllowModels = editForm.value.allowModelsList.join(',');
   }
   if (!arraysEqual(editForm.value.allowLevelsList, initialEditForm.value.allowLevelsList) && editForm.value.allowLevelsList?.length) {
-    payload.AllowLevels = editForm.value.allowLevelsList;
+    payload.AllowLevels = editForm.value.allowLevelsList.join(',');
   }
   if (!arraysEqual(editForm.value.resourcesList, initialEditForm.value.resourcesList) && editForm.value.resourcesList?.length) {
-    payload.Resources = editForm.value.resourcesList;
+    payload.Resources = editForm.value.resourcesList.join(',');
   }
 
-  // 高级配置 - 只有修改过的才添加
+  // 高级配置 - 转为字符串格式
   if (!mapperListsEqual(editForm.value.modelMapperList, initialEditForm.value.modelMapperList) && editForm.value.modelMapperList?.length) {
     const mappedEntries = editForm.value.modelMapperList
       .filter(item => item.key && item.value)
-      .map(item => [item.key, item.value]);
+      .map(item => `${item.key}=${item.value}`);
     if (mappedEntries.length > 0) {
-      payload.ModelMapper = Object.fromEntries(mappedEntries);
+      payload.ModelMapper = mappedEntries.join(',');
     }
   }
 
   if (!mapperListsEqual(editForm.value.levelMapperList, initialEditForm.value.levelMapperList) && editForm.value.levelMapperList?.length) {
     const mappedEntries = editForm.value.levelMapperList
       .filter(item => item.key && item.value)
-      .map(item => [item.key, item.value]);
+      .map(item => `${item.key}=${item.value}`);
     if (mappedEntries.length > 0) {
-      payload.LevelMapper = Object.fromEntries(mappedEntries);
+      payload.LevelMapper = mappedEntries.join(',');
     }
   }
 
@@ -1234,10 +1240,11 @@ async function handleUpdate() {
     payload.QRCode = editForm.value.qrcode.trim();
   }
 
-  if (Object.keys(payload).length === 0) {
-    message.error('没有修改任何字段');
-    return;
-  }
+  // Name 字段必传,所以不需要检查是否为空
+  // if (Object.keys(payload).length === 0) {
+  //   message.error('没有修改任何字段');
+  //   return;
+  // }
 
   // Root 用户可以跳过限制校验
   if (!authStore.isRoot && parentLimits.value) {
