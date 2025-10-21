@@ -731,7 +731,7 @@ const authStore = useAuthStore();
 const parentLimits = ref(null);
 
 // 数据状态
-const allAccounts = ref([]); // 后端返回的全量数据
+const allAccounts = ref([]); // 当前页的数据
 const loading = ref(false);
 const submitting = ref(false);
 const searchKeyword = ref('');
@@ -799,46 +799,23 @@ const creditForm = ref({
   days: 365, // 默认有效期365天（1年）
 });
 
-// 搜索过滤后的数据总数(用于分页显示)
-const filteredCount = computed(() => {
-  const keyword = searchKeyword.value.trim().toLowerCase();
-  if (!keyword) return allAccounts.value.length;
-
-  return allAccounts.value.filter((account) => {
-    const searchText = [
-      account.id?.toString(),
-      account.ID?.toString(),
-      account.name,
-      account.Name,
-      account.email,
-      account.Email,
-      account.alias,
-      account.Alias,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-    return searchText.includes(keyword);
-  }).length;
-});
-
-// 分页配置 - 前端假分页
+// 后端分页配置
 const pagination = computed(() => ({
   page: currentPage.value,
   pageSize: pageSize.value,
-  itemCount: filteredCount.value, // 使用过滤后数据的总数
+  itemCount: totalCount.value, // 使用后端返回的总数
   showSizePicker: true,
   pageSizes: [10, 20, 50, 100],
   showQuickJumper: true,
   prefix: ({ itemCount }) => `共 ${itemCount} 条`,
   onUpdatePage: (page) => {
     currentPage.value = page;
-    // 前端分页,不需要调用 refreshList
+    refreshList(); // 后端分页,需要重新加载数据
   },
   onUpdatePageSize: (size) => {
     pageSize.value = size;
     currentPage.value = 1;
-    // 前端分页,不需要调用 refreshList
+    refreshList(); // 后端分页,需要重新加载数据
   },
 }));
 
@@ -1008,35 +985,9 @@ const columns = [
   },
 ];
 
-// 过滤后的账户列表 - 前端搜索 + 前端分页
+// 表格数据 - 直接使用后端返回的当前页数据
 const filteredAccounts = computed(() => {
-  const keyword = searchKeyword.value.trim().toLowerCase();
-
-  // 1. 先进行关键词搜索过滤
-  let filtered = allAccounts.value;
-  if (keyword) {
-    filtered = allAccounts.value.filter((account) => {
-      const searchText = [
-        account.id?.toString(),
-        account.ID?.toString(),
-        account.name,
-        account.Name,
-        account.email,
-        account.Email,
-        account.alias,
-        account.Alias,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return searchText.includes(keyword);
-    });
-  }
-
-  // 2. 前端分页:计算当前页应该显示的数据
-  const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-  return filtered.slice(start, end);
+  return allAccounts.value;
 });
 
 // 生命周期
@@ -1055,20 +1006,23 @@ async function fetchParentLimits() {
   }
 }
 
-// 刷新列表
+// 刷新列表 - 使用后端分页
 async function refreshList() {
   loading.value = true;
   try {
-    // 后端分页固定为 page=1, size=99999,获取全量数据
     const params = {
-      page: 1,
-      size: 99999,
+      page: currentPage.value,
+      size: pageSize.value,
     };
 
     // 如果有 level 筛选
     if (filterForm.value.level !== null && filterForm.value.level !== undefined && filterForm.value.level !== '') {
       params.level = filterForm.value.level;
     }
+
+    // 如果有搜索关键词,后端支持通过 name 或 email 筛选
+    // 但是接口文档显示需要精确匹配,所以这里不传搜索词,保持前端搜索
+    // 或者如果后端有全文搜索参数可以在这里添加
 
     // 支持特殊路径过滤器
     let endpoint = '/x-dna';
@@ -1079,10 +1033,15 @@ async function refreshList() {
       // 如果使用了特殊路径过滤器，返回的可能是单个用户或用户列表
       if (response.data.users) {
         allAccounts.value = response.data.users || [];
-        totalCount.value = response.data.total || allAccounts.value.length;
+        // 从响应头获取总数
+        const headers = response.headers || {};
+        const headerTotal = headers['x-total-count'] || headers['X-Total-Count'];
+        totalCount.value = headerTotal ? parseInt(headerTotal, 10) : (response.data.total || allAccounts.value.length);
       } else if (Array.isArray(response.data)) {
         allAccounts.value = response.data;
-        totalCount.value = response.data.length;
+        const headers = response.headers || {};
+        const headerTotal = headers['x-total-count'] || headers['X-Total-Count'];
+        totalCount.value = headerTotal ? parseInt(headerTotal, 10) : response.data.length;
       } else {
         // 单个用户
         allAccounts.value = [response.data];
@@ -1092,7 +1051,11 @@ async function refreshList() {
       // 普通列表查询
       const response = await getDescendants(params);
       allAccounts.value = response.data.users || response.data || [];
-      totalCount.value = response.data.total || allAccounts.value.length;
+
+      // 从响应头获取总数
+      const headers = response.headers || {};
+      const headerTotal = headers['x-total-count'] || headers['X-Total-Count'];
+      totalCount.value = headerTotal ? parseInt(headerTotal, 10) : (response.data.total || allAccounts.value.length);
     }
   } catch (error) {
     const errorMessage = error?.response?.data?.message || error?.message || '获取子账户列表失败';

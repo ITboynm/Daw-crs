@@ -49,7 +49,7 @@
         </div>
       </header>
 
-      <div v-if="filteredKeys.length" class="keys-table">
+      <div v-if="keys.length" class="keys-table">
         <div class="table-head">
           <span>ID</span>
           <span>名称</span>
@@ -60,7 +60,7 @@
           <span>创建时间</span>
           <span></span>
         </div>
-        <div v-for="item in filteredKeys" :key="item.id" class="table-row">
+        <div v-for="item in keys" :key="item.id" class="table-row">
           <span>{{ item.id }}</span>
           <span>{{ item.name }}</span>
           <span class="truncate" :title="item.provider">{{ item.provider }}</span>
@@ -306,7 +306,6 @@ const message = useMessage();
 const loading = ref(false);
 const submitting = ref(false);
 const keys = ref([]); // 当前页显示的密钥
-const allKeys = ref([]); // 所有密钥数据
 const searchTerm = ref('');
 const levelFilter = ref(null);
 const providerFilter = ref(null);
@@ -355,13 +354,15 @@ const providerTypeOptions = [
 
 const drawerTitle = computed(() => (drawerMode.value === 'create' ? '新增 Provider 密钥' : '编辑 Provider 密钥'));
 
+// 从所有keys中提取唯一的level选项用于筛选器
 const levelOptions = computed(() => {
-  const levels = [...new Set(allKeys.value.map(k => k.level))].sort((a, b) => a - b);
+  const levels = [...new Set(keys.value.map(k => k.level))].sort((a, b) => a - b);
   return levels.map(level => ({ label: `Level ${level}`, value: level }));
 });
 
+// 从所有keys中提取唯一的provider选项用于筛选器
 const providerOptions = computed(() => {
-  const providers = [...new Set(allKeys.value.map(k => k.provider))].filter(Boolean);
+  const providers = [...new Set(keys.value.map(k => k.provider))].filter(Boolean);
   return providers.map(provider => ({
     label: provider,
     value: provider,
@@ -369,39 +370,6 @@ const providerOptions = computed(() => {
 });
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value));
-
-// 前端筛选和分页
-const filteredKeys = computed(() => {
-  let result = allKeys.value;
-
-  // Level 筛选
-  if (levelFilter.value !== null && levelFilter.value !== undefined) {
-    result = result.filter(item => item.level === levelFilter.value);
-  }
-
-  // Provider 筛选
-  if (providerFilter.value) {
-    result = result.filter(item => item.provider === providerFilter.value);
-  }
-
-  // 搜索筛选
-  const term = searchTerm.value.trim().toLowerCase();
-  if (term) {
-    result = result.filter((item) =>
-      [item.name, item.provider, String(item.id)].some((field) =>
-        field?.toString().toLowerCase().includes(term),
-      ),
-    );
-  }
-
-  // 更新总数
-  total.value = result.length;
-
-  // 前端分页
-  const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-  return result.slice(start, end);
-});
 
 onMounted(() => {
   fetchKeys();
@@ -427,39 +395,7 @@ function formatDateTime(dateStr) {
   return formatDate(dateStr, 'YYYY-MM-DD HH:mm');
 }
 
-async function fetchKeys() {
-  loading.value = true;
-  try {
-    // 前端分页模式: 一次性获取所有数据
-    const response = await listProviderKeys({ page: 1, size: 99999 });
-
-    // API直接返回数组,不是嵌套在data.keys中
-    const list = Array.isArray(response.data) ? response.data : (response.data.keys || []);
-    allKeys.value = list.map((item) => ({
-      id: item.ID || item.id,
-      name: item.Name || item.name || '--',
-      provider: item.Provider || item.provider,
-      secretKey: item.SecretKey || item.secret_key,
-      level: item.Level || item.level,
-      status: item.Status ?? item.status ?? true,
-      type: (item.Config && typeof item.Config === 'object' && item.Config.provider_type) ||
-            (item.config && item.config.provider_type) || 'standard',
-      createdAt: item.CreatedAt || item.created_at,
-      updatedAt: item.UpdatedAt || item.updated_at,
-      raw: item,
-    }));
-
-    // 初始化总数
-    total.value = allKeys.value.length;
-  } catch (error) {
-    const errorMessage = error?.response?.data?.message || error?.message || '加载密钥失败';
-    message.error(errorMessage);
-  } finally {
-    loading.value = false;
-  }
-}
-
-/* 后端分页模式 (暂时注释)
+// 获取Provider密钥列表 - 使用后端分页
 async function fetchKeys() {
   loading.value = true;
   try {
@@ -468,20 +404,16 @@ async function fetchKeys() {
       size: pageSize.value,
     };
 
-    // 添加筛选参数 (根据官网文档)
+    // 添加筛选参数 (根据接口文档)
     if (levelFilter.value !== null && levelFilter.value !== undefined) {
       params.level = levelFilter.value;
     }
     if (providerFilter.value) {
       params.provider = providerFilter.value;
     }
-    // 如果后端不支持 search 参数,这里可能需要改为前端搜索
-    // 暂时保留,如果报错再改为前端筛选
-    if (searchTerm.value && searchTerm.value.trim()) {
-      params.search = searchTerm.value.trim();
-    }
 
     const response = await listProviderKeys(params);
+
     // API直接返回数组,不是嵌套在data.keys中
     const list = Array.isArray(response.data) ? response.data : (response.data.keys || []);
     keys.value = list.map((item) => ({
@@ -498,20 +430,25 @@ async function fetchKeys() {
       raw: item,
     }));
 
-    // 处理分页信息
-    if (response.data.total !== undefined) {
-      total.value = response.data.total;
+    // 处理分页信息 - 从 HTTP Headers 中获取
+    // 根据接口文档, 后端通过 X-Total-Count 返回总数
+    const headers = response.headers || {};
+    const totalCount = headers['x-total-count'] || headers['X-Total-Count'];
+    if (totalCount !== undefined) {
+      total.value = parseInt(totalCount, 10);
     } else {
+      // 如果没有header,使用数组长度作为fallback
       total.value = list.length;
     }
   } catch (error) {
     const errorMessage = error?.response?.data?.message || error?.message || '加载密钥失败';
     message.error(errorMessage);
+    keys.value = [];
+    total.value = 0;
   } finally {
     loading.value = false;
   }
 }
-*/
 
 async function openHealthDialog() {
   healthDialogVisible.value = true;
@@ -529,13 +466,13 @@ async function openHealthDialog() {
 
 function handlePageChange(page) {
   currentPage.value = page;
-  // 前端分页模式,不需要重新加载数据
+  fetchKeys(); // 后端分页模式,需要重新加载数据
 }
 
 function handlePageSizeChange(size) {
   pageSize.value = size;
   currentPage.value = 1;
-  // 前端分页模式,不需要重新加载数据
+  fetchKeys(); // 后端分页模式,需要重新加载数据
 }
 
 function openCreateDrawer() {
