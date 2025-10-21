@@ -431,7 +431,7 @@ async function fetchKeys() {
   loading.value = true;
   try {
     // 前端分页模式: 一次性获取所有数据
-    const response = await listProviderKeys({ size: 99999 });
+    const response = await listProviderKeys({ page: 1, size: 99999 });
 
     // API直接返回数组,不是嵌套在data.keys中
     const list = Array.isArray(response.data) ? response.data : (response.data.keys || []);
