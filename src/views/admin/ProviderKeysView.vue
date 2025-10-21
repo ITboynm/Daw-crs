@@ -2,9 +2,23 @@
   <section class="provider-keys-view">
     <n-card class="keys-card" :bordered="false">
       <header class="card-header">
-        <div>
-          <h2>Provider 密钥</h2>
-          <p>统一查看、筛选、编辑上游模型密钥，支持类型化配置。</p>
+        <div class="header-left">
+          <div class="title-row">
+            <h2>Provider 密钥</h2>
+            <n-button
+              type="warning"
+              size="medium"
+              :loading="checkingHealth"
+              @click="openHealthDialog"
+              class="health-check-btn"
+            >
+              <template #icon>
+                <span class="btn-icon">🔍</span>
+              </template>
+              查活
+            </n-button>
+          </div>
+          <p>统一查看、筛选、编辑上游模型密钥,支持类型化配置。</p>
         </div>
         <div class="actions">
           <n-select
@@ -14,6 +28,14 @@
             clearable
             :options="levelOptions"
             style="width: 140px"
+          />
+          <n-select
+            v-model:value="providerFilter"
+            size="small"
+            placeholder="Provider 筛选"
+            clearable
+            :options="providerOptions"
+            style="width: 200px"
           />
           <n-input
             v-model:value="searchTerm"
@@ -60,7 +82,26 @@
         </div>
       </div>
       <div v-else class="empty-state">
-        <p>暂无密钥记录，点击右上角“新增密钥”开始配置。</p>
+        <p>暂无密钥记录,点击右上角"新增密钥"开始配置。</p>
+      </div>
+
+      <!-- 分页组件 -->
+      <div v-if="total > 0" class="pagination-wrapper">
+        <n-pagination
+          v-model:page="currentPage"
+          v-model:page-size="pageSize"
+          :page-count="totalPages"
+          :item-count="total"
+          :page-sizes="[10, 20, 50, 100]"
+          show-size-picker
+          show-quick-jumper
+          @update:page="handlePageChange"
+          @update:page-size="handlePageSizeChange"
+        >
+          <template #prefix="{ itemCount }">
+            共 {{ itemCount }} 条
+          </template>
+        </n-pagination>
       </div>
     </n-card>
 
@@ -152,11 +193,89 @@
         </template>
       </n-drawer-content>
     </n-drawer>
+
+    <!-- 查活弹窗 -->
+    <n-modal v-model:show="healthDialogVisible" preset="card" title="密钥健康状态" style="width: 800px">
+      <div v-if="checkingHealth" class="health-loading">
+        <n-spin size="large" />
+        <p>正在检查密钥状态...</p>
+      </div>
+      <div v-else class="health-content">
+        <div v-if="healthData">
+          <!-- 休眠密钥 -->
+          <div v-if="healthData.SleepingKeys && healthData.SleepingKeys.length > 0" class="health-section">
+            <h3>🟠 休眠中的密钥 ({{ healthData.SleepingKeys.length }})</h3>
+            <div class="health-table">
+              <div v-for="key in healthData.SleepingKeys" :key="key.ID" class="health-row sleeping">
+                <div class="health-info">
+                  <div class="key-name">{{ key.Name || `密钥 #${key.ID}` }}</div>
+                  <div class="key-details">
+                    <span class="detail-item">ID: {{ key.ID }}</span>
+                    <span class="detail-item">Level: {{ key.Level }}</span>
+                    <span class="detail-item truncate" :title="key.Provider">{{ key.Provider }}</span>
+                  </div>
+                  <div class="key-secret">{{ maskSecretKey(key.SecretKey) }}</div>
+                </div>
+                <div class="health-status">
+                  <span class="badge sleeping">休眠中</span>
+                  <span v-if="key.Remaining" class="remaining">剩余: {{ key.Remaining }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 禁用密钥 -->
+          <div v-if="healthData.DisabledKeys && healthData.DisabledKeys.length > 0" class="health-section">
+            <h3>🔴 已禁用的密钥 ({{ healthData.DisabledKeys.length }})</h3>
+            <div class="health-table">
+              <div v-for="key in healthData.DisabledKeys" :key="key.ID" class="health-row disabled">
+                <div class="health-info">
+                  <div class="key-name">{{ key.Name || `密钥 #${key.ID}` }}</div>
+                  <div class="key-details">
+                    <span class="detail-item">ID: {{ key.ID }}</span>
+                    <span class="detail-item">Level: {{ key.Level }}</span>
+                    <span class="detail-item truncate" :title="key.Provider">{{ key.Provider }}</span>
+                  </div>
+                  <div class="key-secret">{{ maskSecretKey(key.SecretKey) }}</div>
+                </div>
+                <div class="health-status">
+                  <span class="badge disabled">已禁用</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 无异常 -->
+          <div v-if="(!healthData.SleepingKeys || healthData.SleepingKeys.length === 0) &&
+                      (!healthData.DisabledKeys || healthData.DisabledKeys.length === 0)"
+               class="health-empty">
+            <div class="empty-icon">✅</div>
+            <h3>所有密钥状态正常</h3>
+            <p>没有休眠或禁用的密钥</p>
+          </div>
+
+          <!-- 配置信息摘要 -->
+          <div class="health-summary">
+            <h4>系统配置信息</h4>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="summary-label">最低余额:</span>
+                <span class="summary-value">{{ healthData.UserMinBalance || 0 }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">API 余额阈值:</span>
+                <span class="summary-value">{{ healthData.UserApiBalance || 0 }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </n-modal>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import {
   NButton,
   NCard,
@@ -166,7 +285,10 @@ import {
   NFormItem,
   NInput,
   NInputNumber,
+  NModal,
+  NPagination,
   NSelect,
+  NSpin,
   NSwitch,
   useMessage,
 } from 'naive-ui';
@@ -175,6 +297,7 @@ import {
   createProviderKey,
   updateProviderKey,
   deleteProviderKey,
+  getProviderKeysConfig,
 } from '@/api/providerKeys';
 import { formatDateTime as formatDate } from '@/utils/formatters';
 
@@ -182,12 +305,24 @@ const message = useMessage();
 
 const loading = ref(false);
 const submitting = ref(false);
-const keys = ref([]);
+const keys = ref([]); // 当前页显示的密钥
+const allKeys = ref([]); // 所有密钥数据
 const searchTerm = ref('');
 const levelFilter = ref(null);
+const providerFilter = ref(null);
 const drawerVisible = ref(false);
 const drawerMode = ref('create');
 const activeKey = ref(null);
+
+// 查活弹窗
+const healthDialogVisible = ref(false);
+const checkingHealth = ref(false);
+const healthData = ref(null);
+
+// 分页相关
+const currentPage = ref(1);
+const pageSize = ref(20);
+const total = ref(0);
 
 const defaultForm = () => ({
   type: 'standard',
@@ -221,16 +356,32 @@ const providerTypeOptions = [
 const drawerTitle = computed(() => (drawerMode.value === 'create' ? '新增 Provider 密钥' : '编辑 Provider 密钥'));
 
 const levelOptions = computed(() => {
-  const levels = [...new Set(keys.value.map(k => k.level))].sort((a, b) => a - b);
+  const levels = [...new Set(allKeys.value.map(k => k.level))].sort((a, b) => a - b);
   return levels.map(level => ({ label: `Level ${level}`, value: level }));
 });
 
+const providerOptions = computed(() => {
+  const providers = [...new Set(allKeys.value.map(k => k.provider))].filter(Boolean);
+  return providers.map(provider => ({
+    label: provider,
+    value: provider,
+  }));
+});
+
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value));
+
+// 前端筛选和分页
 const filteredKeys = computed(() => {
-  let result = keys.value;
+  let result = allKeys.value;
 
   // Level 筛选
   if (levelFilter.value !== null && levelFilter.value !== undefined) {
     result = result.filter(item => item.level === levelFilter.value);
+  }
+
+  // Provider 筛选
+  if (providerFilter.value) {
+    result = result.filter(item => item.provider === providerFilter.value);
   }
 
   // 搜索筛选
@@ -243,11 +394,22 @@ const filteredKeys = computed(() => {
     );
   }
 
-  return result;
+  // 更新总数
+  total.value = result.length;
+
+  // 前端分页
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+  return result.slice(start, end);
 });
 
 onMounted(() => {
   fetchKeys();
+});
+
+// 监听筛选条件变化,重置到第一页
+watch([levelFilter, providerFilter, searchTerm], () => {
+  currentPage.value = 1;
 });
 
 function resetForm() {
@@ -268,8 +430,59 @@ function formatDateTime(dateStr) {
 async function fetchKeys() {
   loading.value = true;
   try {
-    const response = await listProviderKeys({ size: 200 });
-    // API直接返回数组，不是嵌套在data.keys中
+    // 前端分页模式: 一次性获取所有数据
+    const response = await listProviderKeys({ size: 99999 });
+
+    // API直接返回数组,不是嵌套在data.keys中
+    const list = Array.isArray(response.data) ? response.data : (response.data.keys || []);
+    allKeys.value = list.map((item) => ({
+      id: item.ID || item.id,
+      name: item.Name || item.name || '--',
+      provider: item.Provider || item.provider,
+      secretKey: item.SecretKey || item.secret_key,
+      level: item.Level || item.level,
+      status: item.Status ?? item.status ?? true,
+      type: (item.Config && typeof item.Config === 'object' && item.Config.provider_type) ||
+            (item.config && item.config.provider_type) || 'standard',
+      createdAt: item.CreatedAt || item.created_at,
+      updatedAt: item.UpdatedAt || item.updated_at,
+      raw: item,
+    }));
+
+    // 初始化总数
+    total.value = allKeys.value.length;
+  } catch (error) {
+    const errorMessage = error?.response?.data?.message || error?.message || '加载密钥失败';
+    message.error(errorMessage);
+  } finally {
+    loading.value = false;
+  }
+}
+
+/* 后端分页模式 (暂时注释)
+async function fetchKeys() {
+  loading.value = true;
+  try {
+    const params = {
+      page: currentPage.value,
+      size: pageSize.value,
+    };
+
+    // 添加筛选参数 (根据官网文档)
+    if (levelFilter.value !== null && levelFilter.value !== undefined) {
+      params.level = levelFilter.value;
+    }
+    if (providerFilter.value) {
+      params.provider = providerFilter.value;
+    }
+    // 如果后端不支持 search 参数,这里可能需要改为前端搜索
+    // 暂时保留,如果报错再改为前端筛选
+    if (searchTerm.value && searchTerm.value.trim()) {
+      params.search = searchTerm.value.trim();
+    }
+
+    const response = await listProviderKeys(params);
+    // API直接返回数组,不是嵌套在data.keys中
     const list = Array.isArray(response.data) ? response.data : (response.data.keys || []);
     keys.value = list.map((item) => ({
       id: item.ID || item.id,
@@ -284,12 +497,45 @@ async function fetchKeys() {
       updatedAt: item.UpdatedAt || item.updated_at,
       raw: item,
     }));
+
+    // 处理分页信息
+    if (response.data.total !== undefined) {
+      total.value = response.data.total;
+    } else {
+      total.value = list.length;
+    }
   } catch (error) {
     const errorMessage = error?.response?.data?.message || error?.message || '加载密钥失败';
     message.error(errorMessage);
   } finally {
     loading.value = false;
   }
+}
+*/
+
+async function openHealthDialog() {
+  healthDialogVisible.value = true;
+  checkingHealth.value = true;
+  try {
+    const response = await getProviderKeysConfig();
+    healthData.value = response.data;
+  } catch (error) {
+    const errorMessage = error?.response?.data?.message || error?.message || '获取密钥状态失败';
+    message.error(errorMessage);
+  } finally {
+    checkingHealth.value = false;
+  }
+}
+
+function handlePageChange(page) {
+  currentPage.value = page;
+  // 前端分页模式,不需要重新加载数据
+}
+
+function handlePageSizeChange(size) {
+  pageSize.value = size;
+  currentPage.value = 1;
+  // 前端分页模式,不需要重新加载数据
 }
 
 function openCreateDrawer() {
@@ -410,7 +656,7 @@ async function toggleKey(item) {
 }
 
 async function removeKey(item) {
-  if (!window.confirm(`确定删除密钥 ${item.name || item.id} 吗？此操作不可撤销。`)) return;
+  if (!window.confirm(`确定删除密钥 ${item.name || item.id} 吗?此操作不可撤销。`)) return;
   try {
     await deleteProviderKey(item.id);
     message.success('密钥已删除');
@@ -452,6 +698,19 @@ function renderTypeLabel(type) {
 .card-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.header-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title-row {
+  display: flex;
   align-items: center;
   gap: 16px;
 }
@@ -462,8 +721,24 @@ function renderTypeLabel(type) {
 }
 
 .card-header p {
-  margin: 6px 0 0;
+  margin: 0;
   color: var(--daw-text-secondary);
+}
+
+.health-check-btn {
+  border-radius: 12px !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.25) !important;
+  transition: all 0.2s ease;
+}
+
+.health-check-btn:hover {
+  box-shadow: 0 4px 12px rgba(251, 146, 60, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  font-size: 1.1rem;
 }
 
 .actions {
@@ -552,6 +827,12 @@ function renderTypeLabel(type) {
   background: rgba(248, 250, 255, 0.7);
 }
 
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
 .drawer-form {
   display: flex;
   flex-direction: column;
@@ -602,6 +883,15 @@ function renderTypeLabel(type) {
     align-items: flex-start;
   }
 
+  .title-row {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .health-check-btn {
+    width: 100%;
+  }
+
   .actions {
     width: 100%;
     flex-wrap: wrap;
@@ -614,4 +904,189 @@ function renderTypeLabel(type) {
     width: calc(100% + 56px);
   }
 }
+
+/* 查活弹窗样式 */
+.health-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 20px;
+}
+
+.health-loading p {
+  color: var(--daw-text-secondary);
+  margin: 0;
+}
+
+.health-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.health-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.health-section h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.health-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.health-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(247, 248, 253, 0.5);
+  gap: 16px;
+}
+
+.health-row.sleeping {
+  border-color: rgba(251, 146, 60, 0.3);
+  background: rgba(251, 146, 60, 0.05);
+}
+
+.health-row.disabled {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.health-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.key-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--daw-text);
+}
+
+.key-details {
+  display: flex;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--daw-text-secondary);
+}
+
+.detail-item {
+  display: inline-block;
+}
+
+.key-secret {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  color: var(--daw-text-tertiary);
+}
+
+.health-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.badge.sleeping {
+  background: rgba(251, 146, 60, 0.18);
+  color: #f97316;
+}
+
+.badge.disabled {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ef4444;
+}
+
+.remaining {
+  font-size: 0.8rem;
+  color: var(--daw-text-secondary);
+}
+
+.health-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 12px;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+}
+
+.health-empty h3 {
+  margin: 0;
+  color: var(--daw-text);
+}
+
+.health-empty p {
+  margin: 0;
+  color: var(--daw-text-secondary);
+}
+
+.health-summary {
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(247, 248, 253, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.health-summary h4 {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-label {
+  color: var(--daw-text-secondary);
+  font-size: 0.85rem;
+}
+
+.summary-value {
+  font-weight: 600;
+  color: var(--daw-text);
+}
+
 </style>

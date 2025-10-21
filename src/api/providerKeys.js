@@ -19,3 +19,8 @@ export function updateProviderKey(id, payload) {
 export function deleteProviderKey(id) {
   return http.delete(`/x-keys/${encodeURIComponent(id)}`);
 }
+
+// 获取系统配置和密钥状态(包括休眠情况)
+export function getProviderKeysConfig() {
+  return http.get('/x-conf');
+}

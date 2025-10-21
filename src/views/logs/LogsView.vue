@@ -244,9 +244,9 @@ const filterStatus = ref(null);
 
 // 分页
 const currentPage = ref(1);
-const pageSize = ref(24);
+const pageSize = ref(10);
 const totalCount = ref(0);
-const pageSizes = [24, 50, 100];
+const pageSizes = [10, 20, 30, 50, 100];
 
 const statusOptions = [
   { label: '成功', value: 'success' },
