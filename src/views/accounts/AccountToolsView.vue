@@ -9,10 +9,30 @@
         </div>
         <div class="header-actions">
           <n-input
-            v-model:value="searchKeyword"
-            placeholder="搜索用户名、邮箱、ID"
+            v-model:value="searchName"
+            placeholder="搜索用户名"
             clearable
-            style="width: 280px"
+            style="width: 160px"
+          >
+            <template #prefix>
+              <n-icon><SearchOutline /></n-icon>
+            </template>
+          </n-input>
+          <n-input
+            v-model:value="searchEmail"
+            placeholder="搜索邮箱"
+            clearable
+            style="width: 180px"
+          >
+            <template #prefix>
+              <n-icon><SearchOutline /></n-icon>
+            </template>
+          </n-input>
+          <n-input
+            v-model:value="searchId"
+            placeholder="搜索ID"
+            clearable
+            style="width: 120px"
           >
             <template #prefix>
               <n-icon><SearchOutline /></n-icon>
@@ -121,13 +141,13 @@
         <n-form-item label="邮箱" required>
           <n-input v-model:value="createForm.email" placeholder="用户邮箱" />
         </n-form-item>
-        <n-form-item label="初始额度 (USD)" required>
+        <n-form-item label="赠送额度 (USD)" required>
           <n-input-number
             v-model:value="createForm.credit"
             :min="2"
             :step="5"
             style="width: 100%"
-            placeholder="初始额度"
+            placeholder="赠送额度"
           />
           <template #feedback>
             <span style="font-size: 0.85rem; color: var(--daw-text-secondary)">子账户充值额度大于100刀的时候将拥有创建后代的权限</span>
@@ -443,7 +463,7 @@
     <n-modal
       v-model:show="creditModalVisible"
       preset="card"
-      title="调整账户额度"
+      title="充值新卡"
       size="medium"
       :mask-closable="false"
       style="max-width: 500px"
@@ -860,7 +880,7 @@
 </template>
 
 <script setup>
-import { h, ref, computed, onMounted } from 'vue';
+import { h, ref, computed, onMounted, watch } from 'vue';
 import {
   NCard,
   NButton,
@@ -924,7 +944,9 @@ const parentLimits = ref(null);
 const allAccounts = ref([]); // 当前页的数据
 const loading = ref(false);
 const submitting = ref(false);
-const searchKeyword = ref('');
+const searchName = ref('');
+const searchEmail = ref('');
+const searchId = ref('');
 const totalCount = ref(0);
 
 // 筛选条件
@@ -1302,6 +1324,12 @@ onMounted(() => {
   fetchParentLimits();
 });
 
+// 监听搜索关键词变化，自动触发搜索
+watch([searchName, searchEmail, searchId], () => {
+  currentPage.value = 1;
+  refreshList();
+});
+
 // 获取当前用户的限制配置（用于校验子账户）
 async function fetchParentLimits() {
   try {
@@ -1326,9 +1354,19 @@ async function refreshList() {
       params.level = filterForm.value.level;
     }
 
-    // 如果有搜索关键词,后端支持通过 name 或 email 筛选
-    // 但是接口文档显示需要精确匹配,所以这里不传搜索词,保持前端搜索
-    // 或者如果后端有全文搜索参数可以在这里添加
+    // 添加搜索参数
+    if (searchName.value?.trim()) {
+      params.name = searchName.value.trim();
+    }
+    if (searchEmail.value?.trim()) {
+      params.email = searchEmail.value.trim();
+    }
+    if (searchId.value?.trim()) {
+      const id = parseInt(searchId.value.trim(), 10);
+      if (!isNaN(id)) {
+        params.id = id;
+      }
+    }
 
     // 支持特殊路径过滤器
     let endpoint = '/x-dna';

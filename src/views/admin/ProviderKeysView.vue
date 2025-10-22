@@ -375,9 +375,10 @@ onMounted(() => {
   fetchKeys();
 });
 
-// 监听筛选条件变化,重置到第一页
+// 监听筛选条件变化,重置到第一页并重新加载数据
 watch([levelFilter, providerFilter, searchTerm], () => {
   currentPage.value = 1;
+  fetchKeys();
 });
 
 function resetForm() {
