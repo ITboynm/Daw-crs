@@ -16,6 +16,10 @@ export function updateUser(identifier, payload) {
   return http.put(`/x-users/${encodeURIComponent(identifier)}`, payload);
 }
 
+export function postUserXCredit(identifier, payload) {
+  return http.post(`/x-users/${encodeURIComponent(identifier)}`, payload);
+}
+
 export function deleteUser(identifier) {
   return http.delete(`/x-users/${encodeURIComponent(identifier)}`);
 }

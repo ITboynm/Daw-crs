@@ -164,6 +164,14 @@
           账户: <strong>{{ currentAccount?.Name || currentAccount?.name }}</strong> ({{ currentAccount?.Email || currentAccount?.email }})
         </n-alert>
       </div>
+      <div v-if="isRoot" class="root-package-action">
+        <n-button size="small" type="warning" ghost @click="openPackageModal()">
+          <template #icon>
+            <n-icon><TimeOutline /></n-icon>
+          </template>
+          变更套餐到期时间
+        </n-button>
+      </div>
 
       <n-tabs type="line" animated>
         <!-- 基础信息 Tab -->
@@ -505,6 +513,170 @@
       </template>
     </n-modal>
 
+    <!-- 套餐到期调整模态框（仅 root 可见） -->
+    <n-modal
+      v-if="isRoot"
+      v-model:show="packageModalVisible"
+      preset="card"
+      title="调整余额 / 套餐"
+      size="huge"
+      :mask-closable="false"
+      style="max-width: 900px"
+    >
+      <div class="account-info-banner">
+        <div class="info-item">
+          <span class="label">账户：</span>
+          <span class="value">{{ currentAccount?.name || currentAccount?.Name }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">标识：</span>
+          <span class="value">{{ currentAccount?.ID || currentAccount?.id || '--' }}</span>
+        </div>
+      </div>
+      <n-alert type="info" :show-icon="false" style="margin-bottom: 16px">
+        请选择需要调整的余额明细卡片，然后选择操作类型生成 XCredit 指令。
+      </n-alert>
+      <div class="xcredit-modal-layout">
+        <div class="xcredit-credit-list">
+          <template v-if="creditEntries.length">
+            <div
+              v-for="(credit, idx) in creditEntries"
+              :key="credit.Reference || credit.reference || idx"
+              :class="['credit-manage-item', { active: credit === selectedCredit }]"
+            >
+              <div class="credit-manage-info">
+                <div class="credit-row">
+                  <span class="label">Reference</span>
+                  <span class="value">{{ credit.Reference || credit.reference || '--' }}</span>
+                </div>
+                <div class="credit-row">
+                  <span class="label">余额</span>
+                  <span class="value">{{ formatCurrency((credit.Balance || credit.balance || credit.Amount || credit.amount) || 0) }}</span>
+                </div>
+                <div class="credit-row">
+                  <span class="label">到期</span>
+                  <span class="value">{{ formatDateTime((credit.ExpiresAt || credit.expires_at), 'YYYY-MM-DD') || '--' }}</span>
+                </div>
+                <div class="credit-row" v-if="credit.Memo || credit.memo">
+                  <span class="label">备注</span>
+                  <span class="value">{{ credit.Memo || credit.memo }}</span>
+                </div>
+              </div>
+              <n-button size="small" type="primary" ghost @click="selectCredit(credit)">
+                选择调整
+              </n-button>
+            </div>
+          </template>
+          <n-alert v-else type="warning" :show-icon="false">
+            当前账户暂无余额明细可调整。
+          </n-alert>
+        </div>
+
+        <div v-if="selectedCredit" class="xcredit-form-panel">
+          <n-form :model="xCreditForm" label-placement="left" label-width="120">
+            <n-form-item label="Reference">
+              <n-input :value="selectedReference" disabled />
+            </n-form-item>
+            <n-form-item label="操作类型">
+              <n-select
+                v-model:value="xCreditForm.mode"
+                :options="xCreditModeOptions"
+                style="width: 100%"
+              />
+            </n-form-item>
+
+            <n-form-item v-if="xCreditForm.mode === 'expiry'" label="到期调整">
+              <div class="xcredit-inline">
+                <n-select
+                  v-model:value="xCreditForm.direction"
+                  :options="directionOptions"
+                  style="width: 160px"
+                />
+                <n-input-number
+                  v-model:value="xCreditForm.value"
+                  :min="1"
+                  style="width: 140px"
+                  placeholder="数值"
+                />
+                <n-select
+                  v-model:value="xCreditForm.unit"
+                  :options="expiryUnitOptions"
+                  style="width: 140px"
+                />
+              </div>
+              <template #feedback>
+                使用 +d / -d / d+ / d- 语法，如 +30 天、+1 月、+1 年等。
+              </template>
+            </n-form-item>
+
+            <n-form-item v-if="xCreditForm.mode === 'balance'" label="余额调整">
+              <div class="xcredit-inline">
+                <n-select
+                  v-model:value="xCreditForm.direction"
+                  :options="directionOptions"
+                  style="width: 160px"
+                />
+                <n-input-number
+                  v-model:value="xCreditForm.amount"
+                  :min="0"
+                  style="width: 200px"
+                  placeholder="金额 (USD)"
+                >
+                  <template #suffix>USD</template>
+                </n-input-number>
+              </div>
+              <template #feedback>
+                使用 +b / -b / b+ / b- 语法直接调整余额。
+              </template>
+            </n-form-item>
+
+            <n-form-item v-if="xCreditForm.mode === 'rename'" label="新 Reference">
+              <n-input
+                v-model:value="xCreditForm.newReference"
+                placeholder="输入新的 reference 名称"
+              />
+            </n-form-item>
+
+            <n-alert
+              v-if="xCreditForm.mode === 'delete'"
+              type="warning"
+              :show-icon="false"
+              style="margin-bottom: 8px"
+            >
+              将删除整个余额卡片，谨慎操作。
+            </n-alert>
+
+            <n-form-item v-if="xCreditForm.mode === 'custom'" label="自定义指令">
+              <n-input
+                v-model:value="xCreditForm.raw"
+                type="textarea"
+                :autosize="{ minRows: 2, maxRows: 4 }"
+                placeholder="完整的 XCredit 指令，例如：InitialFunding from parent+d30"
+              />
+            </n-form-item>
+          </n-form>
+
+          <n-alert
+            v-if="generatedXCredit"
+            type="info"
+            :show-icon="false"
+            class="xcredit-preview"
+          >
+            将发送指令：
+            <code>{{ generatedXCredit }}</code>
+          </n-alert>
+        </div>
+      </div>
+      <template #footer>
+        <div class="modal-footer">
+          <n-button @click="packageModalVisible = false">取消</n-button>
+          <n-button type="warning" :disabled="!canSubmitXCredit" :loading="xCreditSubmitting" @click="handleXCreditSubmit">
+            确认执行
+          </n-button>
+        </div>
+      </template>
+    </n-modal>
+
     <!-- 查看详情模态框 -->
     <n-modal
       v-model:show="detailModalVisible"
@@ -615,8 +787,22 @@
           <h4>余额明细</h4>
           <div class="credit-list">
             <div v-for="(credit, idx) in (currentAccount.CreditBalance || currentAccount.credit_balance)" :key="idx" class="credit-item">
-              <span class="amount">{{ formatCurrency((credit.Balance || credit.balance || credit.Amount || credit.amount) || 0) }}</span>
-              <span class="expires">到期: {{ formatDateTime((credit.ExpiresAt || credit.expires_at), 'YYYY-MM-DD') }}</span>
+              <div class="credit-item-row">
+                <span class="label">Reference</span>
+                <span class="value">{{ credit.Reference || credit.reference || '--' }}</span>
+              </div>
+              <div class="credit-item-row">
+                <span class="label">余额</span>
+                <span class="value">{{ formatCurrency((credit.Balance || credit.balance || credit.Amount || credit.amount) || 0) }}</span>
+              </div>
+              <div class="credit-item-row">
+                <span class="label">到期</span>
+                <span class="value">{{ formatDateTime((credit.ExpiresAt || credit.expires_at), 'YYYY-MM-DD') }}</span>
+              </div>
+              <div v-if="credit.Memo || credit.memo" class="credit-item-row">
+                <span class="label">备注</span>
+                <span class="value">{{ credit.Memo || credit.memo }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -712,13 +898,16 @@ import {
   GitNetworkOutline,
   ArrowForwardOutline,
   InformationCircleOutline,
+  TimeOutline,
 } from '@vicons/ionicons5';
 import {
   createUser,
   updateUser,
   deleteUser,
+  getUser,
   getDescendants,
   getDescendant,
+  postUserXCredit,
 } from '@/api/accounts';
 import { getLiveStatusWithKey } from '@/api/dashboard';
 import { formatCurrency, formatDateTime } from '@/utils/formatters';
@@ -726,6 +915,7 @@ import { useAuthStore } from '@/store/auth';
 
 const message = useMessage();
 const authStore = useAuthStore();
+const isRoot = computed(() => authStore.isRoot);
 
 // 当前用户自己的配置信息（用于校验子账户不能超过父账户的限制）
 const parentLimits = ref(null);
@@ -747,6 +937,7 @@ const filterForm = ref({
 const createModalVisible = ref(false);
 const editModalVisible = ref(false);
 const creditModalVisible = ref(false);
+const packageModalVisible = ref(false);
 const detailModalVisible = ref(false);
 const createResultModalVisible = ref(false);
 const currentAccount = ref(null);
@@ -798,6 +989,95 @@ const creditForm = ref({
   memo: '',
   days: 365, // 默认有效期365天（1年）
 });
+const selectedCredit = ref(null);
+const xCreditSubmitting = ref(false);
+const xCreditForm = ref({
+  mode: 'expiry',
+  unit: 'd',
+  direction: 'add',
+  value: 30,
+  amount: 100,
+  newReference: '',
+  raw: '',
+});
+
+const xCreditModeOptions = [
+  { label: '调整有效期', value: 'expiry' },
+  { label: '调整余额', value: 'balance' },
+  { label: '修改名称', value: 'rename' },
+  { label: '删除卡片', value: 'delete' },
+  { label: '自定义指令', value: 'custom' },
+];
+
+const expiryUnitOptions = [
+  { label: '天 (d)', value: 'd' },
+  { label: '月 (m)', value: 'm' },
+  { label: '年 (y)', value: 'y' },
+];
+
+const directionOptions = [
+  { label: '延长 / 增加', value: 'add' },
+  { label: '缩短 / 减少', value: 'subtract' },
+];
+
+const creditEntries = computed(() => {
+  const account = currentAccount.value;
+  if (!account) return [];
+  const credits = account.CreditBalance || account.credit_balance;
+  return Array.isArray(credits) ? credits : [];
+});
+
+const selectedReference = computed(() => {
+  if (!selectedCredit.value) return '';
+  return selectedCredit.value.Reference || selectedCredit.value.reference || '';
+});
+
+const generatedXCredit = computed(() => {
+  const reference = selectedReference.value;
+  if (!reference) {
+    return (xCreditForm.value.mode === 'custom' ? (xCreditForm.value.raw || '').trim() : '');
+  }
+
+  switch (xCreditForm.value.mode) {
+    case 'expiry': {
+      const rawValue = Number(xCreditForm.value.value);
+      if (!rawValue || Number.isNaN(rawValue)) return '';
+      const absValue = Math.abs(Math.trunc(rawValue));
+      if (!absValue) return '';
+      const unit = xCreditForm.value.unit || 'd';
+      const direction = xCreditForm.value.direction === 'subtract' ? 'subtract' : 'add';
+      if (unit === 'd') {
+        const prefix = direction === 'add' ? '+d' : '-d';
+        return `${reference}${prefix}${absValue}`;
+      }
+      const signed = direction === 'add' ? absValue : -absValue;
+      return `${reference}+d${signed}${unit}`;
+    }
+    case 'balance': {
+      const amount = Number(xCreditForm.value.amount);
+      if (!amount || Number.isNaN(amount)) return '';
+      const absAmount = Math.abs(amount);
+      if (!absAmount) return '';
+      const prefix = xCreditForm.value.direction === 'subtract' ? '-b' : '+b';
+      return `${reference}${prefix}${absAmount}`;
+    }
+    case 'rename': {
+      const newName = (xCreditForm.value.newReference || '').trim();
+      if (!newName) return '';
+      return `${reference}=${newName}`;
+    }
+    case 'delete': {
+      return reference;
+    }
+    case 'custom': {
+      return (xCreditForm.value.raw || '').trim();
+    }
+    default:
+      return '';
+  }
+});
+
+const canSubmitXCredit = computed(() => Boolean(generatedXCredit.value));
 
 // 后端分页配置
 const pagination = computed(() => ({
@@ -916,10 +1196,10 @@ const columns = [
   {
     title: '操作',
     key: 'actions',
-    width: 200,
+    width: 240,
     fixed: 'right',
     render: (row) => {
-      return h('div', { class: 'action-buttons' }, [
+      const buttons = [
         h(
           NButton,
           {
@@ -945,6 +1225,27 @@ const columns = [
             icon: () => h(NIcon, null, { default: () => h(CreateOutline) }),
           }
         ),
+      ];
+
+      if (authStore.isRoot) {
+        buttons.push(
+          h(
+            NButton,
+            {
+              size: 'small',
+              type: 'warning',
+              ghost: true,
+              onClick: () => openPackageModal(row),
+              title: '变更套餐到期时间',
+            },
+            {
+              icon: () => h(NIcon, null, { default: () => h(TimeOutline) }),
+            }
+          )
+        );
+      }
+
+      buttons.push(
         h(
           NButton,
           {
@@ -957,7 +1258,10 @@ const columns = [
           {
             icon: () => h(NIcon, null, { default: () => h(CashOutline) }),
           }
-        ),
+        )
+      );
+
+      buttons.push(
         h(
           NPopconfirm,
           {
@@ -979,8 +1283,10 @@ const columns = [
               ),
             default: () => '确定删除该子账户？此操作不可恢复！',
           }
-        ),
-      ]);
+        )
+      );
+
+      return h('div', { class: 'action-buttons' }, buttons);
     },
   },
 ];
@@ -1175,6 +1481,75 @@ function openCreditModal(account) {
     days: 365, // 默认有效期365天（1年）
   };
   creditModalVisible.value = true;
+}
+
+function resetXCreditForm() {
+  xCreditForm.value = {
+    mode: 'expiry',
+    unit: 'd',
+    direction: 'add',
+    value: 30,
+    amount: 100,
+    newReference: '',
+    raw: '',
+  };
+}
+
+function selectCredit(credit) {
+  selectedCredit.value = credit;
+  resetXCreditForm();
+  if (!credit) return;
+  // 默认余额调整数值使用当前余额
+  const balanceValue =
+    credit.Balance ??
+    credit.balance ??
+    credit.Amount ??
+    credit.amount ??
+    0;
+  xCreditForm.value.amount = Math.abs(Number(balanceValue)) || 100;
+}
+
+// 打开余额到期调整模态框（仅 root）
+async function openPackageModal(account) {
+  if (!authStore.isRoot) {
+    message.error('仅 root 用户可执行该操作');
+    return;
+  }
+
+  if (account) {
+    currentAccount.value = account;
+  }
+
+  if (!currentAccount.value) {
+    message.error('无法获取账户信息');
+    return;
+  }
+
+  if (!creditEntries.value.length) {
+    try {
+      const identifier =
+        currentAccount.value.ID ||
+        currentAccount.value.id ||
+        currentAccount.value.Name ||
+        currentAccount.value.name;
+      if (identifier) {
+        const response = await getUser(identifier);
+        currentAccount.value = response.data || currentAccount.value;
+      }
+    } catch (error) {
+      console.error('获取账户余额明细失败:', error);
+      message.error('获取账户余额明细失败，请稍后重试');
+      return;
+    }
+  }
+
+  packageModalVisible.value = true;
+  const credits = creditEntries.value;
+  if (credits.length > 0) {
+    selectCredit(credits[0]);
+  } else {
+    selectedCredit.value = null;
+  }
 }
 
 // 打开详情模态框
@@ -1519,6 +1894,55 @@ async function handleCredit() {
   }
 }
 
+// 发送 XCredit 指令（仅 root）
+async function handleXCreditSubmit() {
+  if (!authStore.isRoot) {
+    message.error('仅 root 用户可执行该操作');
+    return;
+  }
+
+  if (!currentAccount.value) {
+    message.error('未选中任何账户');
+    return;
+  }
+
+  if (!selectedCredit.value) {
+    message.error('请选择需要调整的余额明细');
+    return;
+  }
+
+  const xCreditValue = generatedXCredit.value;
+  if (!xCreditValue) {
+    message.error('请输入有效的 XCredit 指令');
+    return;
+  }
+
+  xCreditSubmitting.value = true;
+  try {
+    const identifier =
+      currentAccount.value.ID ||
+      currentAccount.value.id ||
+      currentAccount.value.Name ||
+      currentAccount.value.name;
+    if (!identifier) {
+      message.error('无法获取账户标识符');
+      xCreditSubmitting.value = false;
+      return;
+    }
+
+    await postUserXCredit(identifier, { XCredit: xCreditValue });
+    message.success('操作已提交');
+    packageModalVisible.value = false;
+    // 刷新列表以同步最新额度信息
+    refreshList();
+  } catch (error) {
+    const errorMessage = error?.response?.data?.message || error?.message || '操作失败';
+    message.error(errorMessage);
+  } finally {
+    xCreditSubmitting.value = false;
+  }
+}
+
 // 删除子账户
 async function handleDelete(account) {
   submitting.value = true;
@@ -1675,6 +2099,108 @@ function closeCreateResultModal() {
   flex-wrap: wrap;
 }
 
+.root-package-action {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.xcredit-modal-layout {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.xcredit-credit-list {
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.credit-manage-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(90, 86, 246, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s ease;
+}
+
+.credit-manage-item .n-button {
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.credit-manage-item:hover {
+  border-color: rgba(90, 86, 246, 0.4);
+}
+
+.credit-manage-item.active {
+  border-color: rgba(90, 86, 246, 0.6);
+  box-shadow: 0 0 0 2px rgba(90, 86, 246, 0.15);
+  background: rgba(240, 242, 255, 0.6);
+}
+
+.credit-manage-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.credit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  line-height: 1.4;
+}
+
+.credit-row .label {
+  min-width: 72px;
+  color: var(--daw-text-secondary);
+  font-weight: 500;
+}
+
+.credit-row .value {
+  color: var(--daw-text-primary);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.xcredit-form-panel {
+  flex: 1 1 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.xcredit-inline {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.xcredit-preview {
+  font-size: 0.9rem;
+}
+
+.xcredit-preview code {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 4px 8px;
+  background: rgba(90, 86, 246, 0.1);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
 .info-item {
   display: flex;
   gap: 8px;
@@ -1715,22 +2241,32 @@ function closeCreateResultModal() {
 
 .credit-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   padding: 12px 16px;
   border-radius: 12px;
   background: rgba(247, 248, 253, 0.9);
   border: 1px solid rgba(226, 232, 240, 0.9);
 }
 
-.credit-item .amount {
-  font-weight: 600;
-  color: var(--daw-primary);
+.credit-item-row {
+  display: flex;
+  gap: 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
-.credit-item .expires {
-  font-size: 0.85rem;
+.credit-item-row .label {
+  min-width: 72px;
   color: var(--daw-text-secondary);
+  font-weight: 500;
+}
+
+.credit-item-row .value {
+  color: var(--daw-text-primary);
+  font-weight: 600;
+  word-break: break-all;
 }
 
 .json-display {
