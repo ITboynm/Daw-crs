@@ -418,13 +418,13 @@
             </n-divider>
             <div class="mapper-section">
               <n-alert type="default" :bordered="false" style="margin-bottom: 16px">
-                配置不同分组使用的Provider，例如分组1使用OpenAI，分组2使用Azure
+                配置模型到分组的路由规则，例如将gpt-4模型路由到分组1，将claude-3模型路由到分组2
               </n-alert>
               <div v-for="(item, index) in editForm.levelMapperList" :key="index" class="mapper-item">
                 <div class="mapper-inputs">
                   <n-input
                     v-model:value="item.key"
-                    placeholder="分组 (Level)"
+                    placeholder="模型名 (支持通配符*)"
                     size="medium"
                   />
                   <div class="mapper-arrow">
@@ -432,7 +432,7 @@
                   </div>
                   <n-input
                     v-model:value="item.value"
-                    placeholder="Provider 名称"
+                    placeholder="分组号"
                     size="medium"
                   />
                 </div>
