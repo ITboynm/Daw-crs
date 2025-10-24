@@ -108,21 +108,21 @@
             </div>
 
             <!-- 充值卡明细 -->
-            <div v-if="validCreditBalance.length > 0" class="credit-balance-section">
+            <div v-if="allCreditBalance.length > 0" class="credit-balance-section">
               <div class="section-header">
-                <span class="section-title">充值卡明细（有效期内）</span>
+                <span class="section-title">充值卡明细</span>
                 <div class="credit-header-right">
                   <span class="credit-total">
-                    总计: <strong>{{ formatCurrency(totalValidCredit, { scientific: true }) }}</strong>
+                    有效余额: <strong>{{ formatCurrency(totalValidCredit, { scientific: true }) }}</strong>
                   </span>
                   <n-button
-                    v-if="validCreditBalance.length > 3"
+                    v-if="allCreditBalance.length > 3"
                     text
                     size="small"
                     @click="toggleCreditExpanded"
                     class="toggle-credit-btn"
                   >
-                    {{ isCreditExpanded ? '收起' : `展开全部 (${validCreditBalance.length})` }}
+                    {{ isCreditExpanded ? '收起' : `展开全部 (${allCreditBalance.length})` }}
                     <template #icon>
                       <n-icon>
                         <component :is="isCreditExpanded ? ChevronUpOutline : ChevronDownOutline" />
@@ -132,19 +132,57 @@
                 </div>
               </div>
               <div class="credit-balance-list">
-                <div v-for="(credit, idx) in displayedCreditBalance" :key="idx" class="credit-balance-item">
-                  <div class="credit-amount">
-                    <span class="amount-label">余额</span>
-                    <span class="amount-value">{{ formatCurrency(credit.balance || 0, { scientific: true }) }}</span>
-                  </div>
-                  <div class="credit-expires">
-                    <span class="expires-label">到期时间</span>
-                    <span class="expires-value" :class="{ 'expires-warning': credit.isExpiringSoon }">
-                      {{ formatDateTime(credit.expires_at, 'YYYY-MM-DD HH:mm') }}
-                    </span>
-                    <span v-if="credit.remainingText" class="expires-remaining" :class="{ 'warning': credit.isExpiringSoon }">
-                      {{ credit.remainingText }}
-                    </span>
+                <div 
+                  v-for="(credit, idx) in displayedCreditBalance" 
+                  :key="idx" 
+                  class="credit-balance-item"
+                  :class="{
+                    'is-active': credit.isActive,
+                    'is-expired': credit.isExpired,
+                    'is-depleted': credit.isDepleted
+                  }"
+                >
+                  <div class="credit-info">
+                    <div class="credit-header-row">
+                      <div class="credit-amount-info">
+                        <span class="amount-label">余额</span>
+                        <span class="amount-value">{{ formatCurrency(credit.balance || 0, { scientific: true }) }}</span>
+                        <span class="amount-total">/ {{ formatCurrency(credit.amount || 0, { scientific: true }) }}</span>
+                      </div>
+                      <div class="credit-status-badges">
+                        <span v-if="credit.isActive" class="status-badge status-active">使用中</span>
+                        <span v-if="credit.isExpired" class="status-badge status-expired">已过期</span>
+                        <span v-if="credit.isDepleted && !credit.isExpired" class="status-badge status-depleted">已用完</span>
+                      </div>
+                    </div>
+                    
+                    <!-- 进度条 -->
+                    <div class="credit-progress">
+                      <div 
+                        class="credit-progress-bar" 
+                        :class="{
+                          'progress-depleted': credit.isDepleted && !credit.isExpired,
+                          'progress-expired': credit.isExpired,
+                          'progress-active': credit.isActive
+                        }"
+                      >
+                        <div 
+                          class="credit-progress-fill" 
+                          :style="{ width: credit.usagePercentage + '%' }"
+                        ></div>
+                      </div>
+                      <span class="credit-progress-text">{{ credit.usagePercentage.toFixed(1) }}%</span>
+                    </div>
+
+                    <div class="credit-expires">
+                      <span class="expires-label">到期时间</span>
+                      <span class="expires-value" :class="{ 'expires-warning': credit.isExpiringSoon && !credit.isExpired }">
+                        {{ formatDateTime(credit.expires_at, 'YYYY-MM-DD HH:mm') }}
+                      </span>
+                      <span v-if="credit.remainingText" class="expires-remaining" :class="{ 'warning': credit.isExpiringSoon && !credit.isExpired }">
+                        {{ credit.remainingText }}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -993,49 +1031,77 @@ const isConfirmInputValid = computed(() => {
 
 const lastUpdatedText = computed(() => (lastUpdated.value ? formatDateTime(lastUpdated.value, 'YYYY-MM-DD HH:mm') : '尚未刷新'));
 
-// 有效期内的充值卡明细
-const validCreditBalance = computed(() => {
+// 所有充值卡明细（包括有效和失效的）
+const allCreditBalance = computed(() => {
   const creditBalance = selfUsage.value?.credit_balance || selfUsage.value?.CreditBalance || [];
   if (!Array.isArray(creditBalance)) return [];
 
   const now = new Date();
-  return creditBalance
-    .filter(credit => {
-      const expiresAt = credit.expires_at || credit.ExpiresAt;
-      if (!expiresAt) return false;
-      return new Date(expiresAt) > now;
-    })
+  
+  // 处理所有充值卡
+  const processedCredits = creditBalance
     .map(credit => {
       const expiresAt = credit.expires_at || credit.ExpiresAt;
       const balance = credit.balance || credit.Balance || 0;
+      const amount = credit.amount || credit.Amount || balance; // 总量，如果没有则使用余额
+      
+      if (!expiresAt) return null;
+      
       const remainingText = diffFromNow(expiresAt);
-
-      // 判断是否即将过期（7天内）
       const expiresDate = new Date(expiresAt);
+      const isExpired = expiresDate <= now;
+      
+      // 判断是否即将过期（7天内且未过期）
       const daysUntilExpiry = (expiresDate - now) / (1000 * 60 * 60 * 24);
-      const isExpiringSoon = daysUntilExpiry <= 7;
+      const isExpiringSoon = !isExpired && daysUntilExpiry <= 7;
+      
+      // 判断是否正在使用（balance 小于 amount）
+      const isActive = balance < amount && balance > 0 && !isExpired;
+      
+      // 判断是否余额已用完
+      const isDepleted = balance <= 0;
+      
+      // 计算使用百分比
+      const usagePercentage = amount > 0 ? ((amount - balance) / amount) * 100 : 0;
 
       return {
         balance,
+        amount,
         expires_at: expiresAt,
         remainingText,
         isExpiringSoon,
+        isExpired,
+        isActive,
+        isDepleted,
+        usagePercentage: Math.min(Math.max(usagePercentage, 0), 100), // 限制在 0-100 之间
       };
     })
-    .sort((a, b) => new Date(a.expires_at) - new Date(b.expires_at)); // 按到期时间排序
+    .filter(credit => credit !== null);
+  
+  // 排序：有效的在前，失效的在后；同类按到期时间排序
+  return processedCredits.sort((a, b) => {
+    // 先按是否过期排序
+    if (a.isExpired !== b.isExpired) {
+      return a.isExpired ? 1 : -1;
+    }
+    // 同类按到期时间排序
+    return new Date(a.expires_at) - new Date(b.expires_at);
+  });
 });
 
-// 有效期内总额度
+// 有效期内总余额
 const totalValidCredit = computed(() => {
-  return validCreditBalance.value.reduce((sum, credit) => sum + credit.balance, 0);
+  return allCreditBalance.value
+    .filter(credit => !credit.isExpired)
+    .reduce((sum, credit) => sum + credit.balance, 0);
 });
 
 // 显示的充值卡明细（根据展开状态）
 const displayedCreditBalance = computed(() => {
-  if (isCreditExpanded.value || validCreditBalance.value.length <= 3) {
-    return validCreditBalance.value;
+  if (isCreditExpanded.value || allCreditBalance.value.length <= 3) {
+    return allCreditBalance.value;
   }
-  return validCreditBalance.value.slice(0, 3);
+  return allCreditBalance.value.slice(0, 3);
 });
 
 function loadDismissedNews() {
@@ -1639,26 +1705,70 @@ async function handleUpdateDailyLimit() {
 
 .credit-balance-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
+  flex-direction: column;
+  padding: 16px 18px;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(226, 232, 240, 0.9);
   border-radius: 12px;
-  gap: 16px;
-  transition: all 0.2s ease;
+  gap: 12px;
+  transition: all 0.3s ease;
 }
 
 .credit-balance-item:hover {
   background: rgba(255, 255, 255, 1);
-  box-shadow: 0 2px 8px rgba(90, 86, 246, 0.08);
-  border-color: rgba(90, 86, 246, 0.2);
+  box-shadow: 0 4px 12px rgba(90, 86, 246, 0.12);
+  border-color: rgba(90, 86, 246, 0.3);
+  transform: translateY(-2px);
 }
 
-.credit-amount {
+/* 使用中的卡片样式 */
+.credit-balance-item.is-active {
+  border-color: rgba(90, 86, 246, 0.5);
+  background: linear-gradient(135deg, rgba(90, 86, 246, 0.06), rgba(147, 51, 234, 0.04));
+  box-shadow: 0 2px 12px rgba(90, 86, 246, 0.15);
+}
+
+.credit-balance-item.is-active:hover {
+  border-color: rgba(90, 86, 246, 0.6);
+  box-shadow: 0 4px 16px rgba(90, 86, 246, 0.25);
+}
+
+/* 已过期的卡片样式 */
+.credit-balance-item.is-expired {
+  opacity: 0.6;
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.credit-balance-item.is-expired:hover {
+  opacity: 0.75;
+  transform: translateY(0);
+}
+
+/* 已用完的卡片样式 */
+.credit-balance-item.is-depleted:not(.is-expired) {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.credit-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
+  width: 100%;
+}
+
+.credit-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.credit-amount-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .amount-label {
@@ -1671,16 +1781,118 @@ async function handleUpdateDailyLimit() {
 
 .amount-value {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--daw-primary);
 }
 
+.is-expired .amount-value {
+  color: var(--daw-text-secondary);
+}
+
+.amount-total {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--daw-text-secondary);
+}
+
+.credit-status-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.status-badge {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.status-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-expired {
+  background: rgba(148, 163, 184, 0.15);
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.status-depleted {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* 进度条样式 */
+.credit-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.credit-progress-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 10px;
+  background: rgba(226, 232, 240, 0.5);
+  overflow: hidden;
+  position: relative;
+}
+
+.credit-progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+/* 使用中的进度条 - 绿色渐变 */
+.progress-active .credit-progress-fill {
+  background: linear-gradient(90deg, #10b981, #34d399);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+}
+
+/* 已用完的进度条 - 红色 */
+.progress-depleted .credit-progress-fill {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
+/* 已过期的进度条 - 灰色 */
+.progress-expired .credit-progress-fill {
+  background: linear-gradient(90deg, #94a3b8, #cbd5e1);
+  box-shadow: none;
+}
+
+.credit-progress-text {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--daw-text-secondary);
+  min-width: 45px;
+  text-align: right;
+}
+
+.is-expired .credit-progress-text {
+  color: var(--daw-text-secondary);
+  opacity: 0.7;
+}
+
 .credit-expires {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
 }
 
 .expires-label {
@@ -1700,6 +1912,10 @@ async function handleUpdateDailyLimit() {
 
 .expires-value.expires-warning {
   color: #f59e0b;
+}
+
+.is-expired .expires-value {
+  color: var(--daw-text-secondary);
 }
 
 .expires-remaining {

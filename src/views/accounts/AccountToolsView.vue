@@ -804,24 +804,77 @@
         </div>
 
         <div v-if="(currentAccount.CreditBalance || currentAccount.credit_balance)?.length" class="extra-section">
-          <h4>余额明细</h4>
+          <div class="credit-balance-header">
+            <h4>充值卡明细</h4>
+            <div class="credit-balance-summary">
+              <span class="summary-item">
+                <span class="summary-label">总额度：</span>
+                <span class="summary-value">{{ formatCurrency(getAccountTotalAmount(currentAccount)) }}</span>
+              </span>
+              <span class="summary-item">
+                <span class="summary-label">当前余额：</span>
+                <span class="summary-value primary">{{ formatCurrency(calculateBalance(currentAccount)) }}</span>
+              </span>
+            </div>
+          </div>
           <div class="credit-list">
-            <div v-for="(credit, idx) in (currentAccount.CreditBalance || currentAccount.credit_balance)" :key="idx" class="credit-item">
-              <div class="credit-item-row">
-                <span class="label">Reference</span>
-                <span class="value">{{ credit.Reference || credit.reference || '--' }}</span>
+            <div 
+              v-for="(credit, idx) in getProcessedCredits(currentAccount)" 
+              :key="idx" 
+              class="credit-item-card"
+              :class="{
+                'is-active': credit.isActive,
+                'is-expired': credit.isExpired,
+                'is-depleted': credit.isDepleted
+              }"
+            >
+              <div class="credit-card-header">
+                <div class="credit-card-title">
+                  <span class="label">Reference</span>
+                  <span class="value">{{ credit.reference || '--' }}</span>
+                </div>
+                <div class="credit-card-badges">
+                  <span v-if="credit.isActive" class="status-badge status-active">使用中</span>
+                  <span v-if="credit.isExpired" class="status-badge status-expired">已过期</span>
+                  <span v-if="credit.isDepleted && !credit.isExpired" class="status-badge status-depleted">已用完</span>
+                </div>
               </div>
-              <div class="credit-item-row">
-                <span class="label">余额</span>
-                <span class="value">{{ formatCurrency((credit.Balance || credit.balance || credit.Amount || credit.amount) || 0) }}</span>
+
+              <div class="credit-card-amount">
+                <span class="amount-label">余额</span>
+                <span class="amount-value">{{ formatCurrency(credit.balance) }}</span>
+                <span class="amount-total">/ {{ formatCurrency(credit.amount) }}</span>
               </div>
-              <div class="credit-item-row">
-                <span class="label">到期</span>
-                <span class="value">{{ formatDateTime((credit.ExpiresAt || credit.expires_at), 'YYYY-MM-DD') }}</span>
+
+              <!-- 进度条 -->
+              <div class="credit-card-progress">
+                <div 
+                  class="progress-bar" 
+                  :class="{
+                    'progress-depleted': credit.isDepleted && !credit.isExpired,
+                    'progress-expired': credit.isExpired,
+                    'progress-active': credit.isActive
+                  }"
+                >
+                  <div 
+                    class="progress-fill" 
+                    :style="{ width: credit.usagePercentage + '%' }"
+                  ></div>
+                </div>
+                <span class="progress-text">{{ credit.usagePercentage.toFixed(1) }}%</span>
               </div>
-              <div v-if="credit.Memo || credit.memo" class="credit-item-row">
-                <span class="label">备注</span>
-                <span class="value">{{ credit.Memo || credit.memo }}</span>
+
+              <div class="credit-card-footer">
+                <div class="credit-item-row">
+                  <span class="label">到期时间</span>
+                  <span class="value" :class="{ 'text-warning': credit.isExpiringSoon && !credit.isExpired }">
+                    {{ formatDateTime(credit.expiresAt, 'YYYY-MM-DD HH:mm') }}
+                  </span>
+                </div>
+                <div v-if="credit.memo" class="credit-item-row">
+                  <span class="label">备注</span>
+                  <span class="value">{{ credit.memo }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1142,6 +1195,70 @@ function calculateTotalCredit(account) {
   return creditBalance.reduce((sum, item) => {
     return sum + (item.amount || item.Amount || 0);
   }, 0);
+}
+
+// 获取账户充值卡总额（amount字段的总和）
+function getAccountTotalAmount(account) {
+  const creditBalance = account.CreditBalance || account.credit_balance || [];
+  if (!Array.isArray(creditBalance)) return 0;
+
+  return creditBalance.reduce((sum, item) => {
+    const amount = item.amount || item.Amount || item.balance || item.Balance || 0;
+    return sum + amount;
+  }, 0);
+}
+
+// 处理充值卡数据，添加进度条相关信息
+function getProcessedCredits(account) {
+  const creditBalance = account.CreditBalance || account.credit_balance || [];
+  if (!Array.isArray(creditBalance)) return [];
+
+  const now = new Date();
+
+  const processedCredits = creditBalance.map(credit => {
+    const expiresAt = credit.ExpiresAt || credit.expires_at;
+    const balance = credit.Balance || credit.balance || 0;
+    const amount = credit.Amount || credit.amount || balance;
+    const reference = credit.Reference || credit.reference || '';
+    const memo = credit.Memo || credit.memo || '';
+
+    const expiresDate = new Date(expiresAt);
+    const isExpired = expiresDate <= now;
+
+    // 判断是否即将过期（7天内且未过期）
+    const daysUntilExpiry = (expiresDate - now) / (1000 * 60 * 60 * 24);
+    const isExpiringSoon = !isExpired && daysUntilExpiry <= 7;
+
+    // 判断是否正在使用（balance 小于 amount）
+    const isActive = balance < amount && balance > 0 && !isExpired;
+
+    // 判断是否余额已用完
+    const isDepleted = balance <= 0;
+
+    // 计算使用百分比
+    const usagePercentage = amount > 0 ? ((amount - balance) / amount) * 100 : 0;
+
+    return {
+      reference,
+      balance,
+      amount,
+      expiresAt,
+      memo,
+      isExpired,
+      isExpiringSoon,
+      isActive,
+      isDepleted,
+      usagePercentage: Math.min(Math.max(usagePercentage, 0), 100),
+    };
+  });
+
+  // 排序：有效的在前，失效的在后
+  return processedCredits.sort((a, b) => {
+    if (a.isExpired !== b.isExpired) {
+      return a.isExpired ? 1 : -1;
+    }
+    return new Date(a.expiresAt) - new Date(b.expiresAt);
+  });
 }
 
 // 表格列配置
@@ -2271,6 +2388,49 @@ function closeCreateResultModal() {
   color: var(--daw-text-secondary);
 }
 
+.credit-balance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.credit-balance-header h4 {
+  margin: 0;
+}
+
+.credit-balance-summary {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.summary-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.summary-label {
+  color: var(--daw-text-secondary);
+  font-weight: 500;
+}
+
+.summary-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--daw-text-primary);
+}
+
+.summary-value.primary {
+  color: var(--daw-primary);
+}
+
 .credit-list {
   display: flex;
   flex-direction: column;
@@ -2286,6 +2446,194 @@ function closeCreateResultModal() {
   border-radius: 12px;
   background: rgba(247, 248, 253, 0.9);
   border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.credit-item-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  gap: 12px;
+  transition: all 0.3s ease;
+}
+
+.credit-item-card:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 4px 12px rgba(90, 86, 246, 0.12);
+  border-color: rgba(90, 86, 246, 0.3);
+  transform: translateY(-2px);
+}
+
+/* 使用中的卡片 */
+.credit-item-card.is-active {
+  border-color: rgba(90, 86, 246, 0.5);
+  background: linear-gradient(135deg, rgba(90, 86, 246, 0.06), rgba(147, 51, 234, 0.04));
+  box-shadow: 0 2px 12px rgba(90, 86, 246, 0.15);
+}
+
+.credit-item-card.is-active:hover {
+  border-color: rgba(90, 86, 246, 0.6);
+  box-shadow: 0 4px 16px rgba(90, 86, 246, 0.25);
+}
+
+/* 已过期的卡片 */
+.credit-item-card.is-expired {
+  opacity: 0.6;
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.credit-item-card.is-expired:hover {
+  opacity: 0.75;
+  transform: translateY(0);
+}
+
+/* 已用完的卡片 */
+.credit-item-card.is-depleted:not(.is-expired) {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.credit-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.credit-card-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.credit-card-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.status-badge {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.status-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-expired {
+  background: rgba(148, 163, 184, 0.15);
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.status-depleted {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.credit-card-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.amount-label {
+  font-size: 0.7rem;
+  color: var(--daw-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.amount-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--daw-primary);
+}
+
+.is-expired .amount-value {
+  color: var(--daw-text-secondary);
+}
+
+.amount-total {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--daw-text-secondary);
+}
+
+.credit-card-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 10px;
+  background: rgba(226, 232, 240, 0.5);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.progress-active .progress-fill {
+  background: linear-gradient(90deg, #10b981, #34d399);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+}
+
+.progress-depleted .progress-fill {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
+.progress-expired .progress-fill {
+  background: linear-gradient(90deg, #94a3b8, #cbd5e1);
+  box-shadow: none;
+}
+
+.progress-text {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--daw-text-secondary);
+  min-width: 45px;
+  text-align: right;
+}
+
+.is-expired .progress-text {
+  color: var(--daw-text-secondary);
+  opacity: 0.7;
+}
+
+.credit-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
 }
 
 .credit-item-row {
@@ -2305,6 +2653,10 @@ function closeCreateResultModal() {
   color: var(--daw-text-primary);
   font-weight: 600;
   word-break: break-all;
+}
+
+.credit-item-row .value.text-warning {
+  color: #f59e0b;
 }
 
 .json-display {
