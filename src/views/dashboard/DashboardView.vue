@@ -52,59 +52,122 @@
               </div>
             </div>
 
-            <!-- 每月限额进度条 -->
-            <div v-if="selfUsage?.hard_limit !== undefined && selfUsage?.hard_limit > 0" class="daily-limit-section">
-              <div class="daily-limit-header">
-                <div class="daily-limit-info">
-                  <span class="daily-limit-label">每月消费额度</span>
-                  <span class="daily-limit-values">
-                    <span class="used">{{ formatCurrency(selfUsage?.credit_used || 0, { scientific: true }) }}</span>
-                    <span class="separator">/</span>
-                    <span class="total">{{ formatCurrency(selfUsage?.hard_limit || 0, { scientific: true }) }}</span>
-                  </span>
+            <!-- 消费额度水球图 -->
+            <div class="limit-liquid-section">
+              <!-- 每月限额水球图 -->
+              <div v-if="selfUsage?.hard_limit !== undefined && selfUsage?.hard_limit > 0" class="liquid-ball-container">
+                <div class="liquid-ball-header">
+                  <span class="liquid-ball-label">每月消费额度</span>
+                </div>
+                <div class="liquid-ball-wrapper">
+                  <div class="liquid-ball-background" :class="'bg-' + monthlyLimitStatus"></div>
+                  <div class="liquid-ball" :class="'liquid-' + monthlyLimitStatus">
+                    <svg class="liquid-svg" viewBox="0 0 200 200">
+                    <defs>
+                      <linearGradient :id="'monthlyGradient'" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" :style="{ stopColor: getGradientColor(monthlyLimitStatus, 'start'), stopOpacity: 0.8 }" />
+                        <stop offset="100%" :style="{ stopColor: getGradientColor(monthlyLimitStatus, 'end'), stopOpacity: 0.9 }" />
+                      </linearGradient>
+                      <clipPath id="monthlyClip">
+                        <circle cx="100" cy="100" r="90" />
+                      </clipPath>
+                    </defs>
+                    
+                    <!-- 外圈 -->
+                    <circle cx="100" cy="100" r="90" fill="none" :stroke="getGradientColor(monthlyLimitStatus, 'border')" stroke-width="3" opacity="0.3" />
+                    
+                    <!-- 液体波浪 -->
+                    <g clip-path="url(#monthlyClip)">
+                      <path
+                        :d="generateWavePath(monthlyLimitPercentage, 0)"
+                        :fill="'url(#monthlyGradient)'"
+                        class="liquid-wave liquid-wave-1"
+                      />
+                      <path
+                        :d="generateWavePath(monthlyLimitPercentage, 50)"
+                        :fill="'url(#monthlyGradient)'"
+                        class="liquid-wave liquid-wave-2"
+                        opacity="0.6"
+                      />
+                    </g>
+                    
+                    <!-- 百分比文字 -->
+                    <text x="100" y="90" text-anchor="middle" class="liquid-percentage">
+                      {{ monthlyLimitPercentage.toFixed(1) }}%
+                    </text>
+                    <text x="100" y="118" text-anchor="middle" class="liquid-label-text">
+                      {{ formatCurrency(selfUsage?.credit_used || 0, { scientific: true }) }}
+                    </text>
+                    <text x="100" y="138" text-anchor="middle" class="liquid-label-sub">
+                      / {{ formatCurrency(selfUsage?.hard_limit || 0, { scientific: true }) }}
+                    </text>
+                    </svg>
+                  </div>
                 </div>
               </div>
-              <n-progress
-                type="line"
-                :percentage="monthlyLimitPercentage"
-                :status="monthlyLimitStatus"
-                :height="8"
-                :border-radius="4"
-                :fill-border-radius="4"
-              />
-            </div>
 
-            <!-- 每日限额进度条 -->
-            <div v-if="selfUsage?.daily_limit !== undefined && selfUsage?.daily_limit > 0" class="daily-limit-section">
-              <div class="daily-limit-header">
-                <div class="daily-limit-info">
-                  <span class="daily-limit-label">每日消费额度</span>
-                  <span class="daily-limit-values">
-                    <span class="used">{{ formatCurrency(usageSummary?.total_credit_used || 0, { scientific: true }) }}</span>
-                    <span class="separator">/</span>
-                    <span class="total">{{ formatCurrency(selfUsage?.daily_limit || 0, { scientific: true }) }}</span>
-                  </span>
+              <!-- 每日限额水球图 -->
+              <div v-if="selfUsage?.daily_limit !== undefined && selfUsage?.daily_limit > 0" class="liquid-ball-container">
+                <div class="liquid-ball-header">
+                  <span class="liquid-ball-label">每日消费额度</span>
+                  <n-button
+                    type="primary"
+                    size="small"
+                    @click="openEditDailyLimitModal"
+                    class="edit-limit-button-small"
+                  >
+                    <template #icon>
+                      <n-icon><CreateOutline /></n-icon>
+                    </template>
+                    调整
+                  </n-button>
                 </div>
-                <n-button
-                  type="primary"
-                  size="medium"
-                  @click="openEditDailyLimitModal"
-                  class="edit-limit-button"
-                >
-                  <template #icon>
-                    <n-icon><CreateOutline /></n-icon>
-                  </template>
-                  调整个人限额
-                </n-button>
+                <div class="liquid-ball-wrapper">
+                  <div class="liquid-ball-background" :class="'bg-' + dailyLimitStatus"></div>
+                  <div class="liquid-ball" :class="'liquid-' + dailyLimitStatus">
+                    <svg class="liquid-svg" viewBox="0 0 200 200">
+                    <defs>
+                      <linearGradient :id="'dailyGradient'" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" :style="{ stopColor: getGradientColor(dailyLimitStatus, 'start'), stopOpacity: 0.8 }" />
+                        <stop offset="100%" :style="{ stopColor: getGradientColor(dailyLimitStatus, 'end'), stopOpacity: 0.9 }" />
+                      </linearGradient>
+                      <clipPath id="dailyClip">
+                        <circle cx="100" cy="100" r="90" />
+                      </clipPath>
+                    </defs>
+                    
+                    <!-- 外圈 -->
+                    <circle cx="100" cy="100" r="90" fill="none" :stroke="getGradientColor(dailyLimitStatus, 'border')" stroke-width="3" opacity="0.3" />
+                    
+                    <!-- 液体波浪 -->
+                    <g clip-path="url(#dailyClip)">
+                      <path
+                        :d="generateWavePath(dailyLimitPercentage, 0)"
+                        :fill="'url(#dailyGradient)'"
+                        class="liquid-wave liquid-wave-1"
+                      />
+                      <path
+                        :d="generateWavePath(dailyLimitPercentage, 50)"
+                        :fill="'url(#dailyGradient)'"
+                        class="liquid-wave liquid-wave-2"
+                        opacity="0.6"
+                      />
+                    </g>
+                    
+                    <!-- 百分比文字 -->
+                    <text x="100" y="90" text-anchor="middle" class="liquid-percentage">
+                      {{ dailyLimitPercentage.toFixed(1) }}%
+                    </text>
+                    <text x="100" y="118" text-anchor="middle" class="liquid-label-text">
+                      {{ formatCurrency(usageSummary?.total_credit_used || 0, { scientific: true }) }}
+                    </text>
+                    <text x="100" y="138" text-anchor="middle" class="liquid-label-sub">
+                      / {{ formatCurrency(selfUsage?.daily_limit || 0, { scientific: true }) }}
+                    </text>
+                    </svg>
+                  </div>
+                </div>
               </div>
-              <n-progress
-                type="line"
-                :percentage="dailyLimitPercentage"
-                :status="dailyLimitStatus"
-                :height="8"
-                :border-radius="4"
-                :fill-border-radius="4"
-              />
             </div>
 
             <!-- 充值卡明细 -->
@@ -1326,6 +1389,56 @@ function toggleCreditExpanded() {
   isCreditExpanded.value = !isCreditExpanded.value;
 }
 
+// 生成波浪路径
+function generateWavePath(percentage, offset = 0) {
+  const waveHeight = 8; // 波浪高度
+  const waveCount = 3; // 波浪数量
+  const width = 200;
+  const fillHeight = 200 - (percentage / 100) * 180; // 液体高度
+  
+  let path = `M 0,${fillHeight}`;
+  
+  // 生成波浪曲线
+  for (let i = 0; i <= width; i += 2) {
+    const x = i;
+    const y = fillHeight + Math.sin((i / width) * Math.PI * waveCount + (offset / 100) * Math.PI * 2) * waveHeight;
+    path += ` L ${x},${y}`;
+  }
+  
+  // 闭合路径
+  path += ` L ${width},200 L 0,200 Z`;
+  
+  return path;
+}
+
+// 获取不同状态的颜色
+function getGradientColor(status, type) {
+  const colors = {
+    success: {
+      start: '#10b981',
+      end: '#059669',
+      border: '#10b981',
+    },
+    warning: {
+      start: '#f59e0b',
+      end: '#d97706',
+      border: '#f59e0b',
+    },
+    error: {
+      start: '#ef4444',
+      end: '#dc2626',
+      border: '#ef4444',
+    },
+    default: {
+      start: '#5a56f6',
+      end: '#4338ca',
+      border: '#5a56f6',
+    }
+  };
+  
+  return colors[status]?.[type] || colors.default[type];
+}
+
 function openEditDailyLimitModal() {
   editDailyLimitForm.value.dailyLimit = selfUsage.value?.daily_limit || 0;
   editDailyLimitModalVisible.value = true;
@@ -1591,63 +1704,174 @@ async function handleUpdateDailyLimit() {
   padding: 20px 0;
 }
 
-/* Daily Limit Section */
-.daily-limit-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* Liquid Ball Section */
+.limit-liquid-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
   padding-top: 16px;
   margin-top: 4px;
   border-top: 1px solid rgba(226, 232, 240, 0.6);
 }
 
-.daily-limit-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.daily-limit-info {
+.liquid-ball-container {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(247, 248, 253, 0.95));
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(90, 86, 246, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s ease;
 }
 
-.daily-limit-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--daw-text-secondary);
+.liquid-ball-container:hover {
+  box-shadow: 0 6px 24px rgba(90, 86, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+.liquid-ball-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.liquid-ball-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--daw-text-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.daily-limit-values {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.95rem;
-}
-
-.daily-limit-values .used {
-  font-weight: 700;
-  color: var(--daw-primary);
-}
-
-.daily-limit-values .separator {
-  color: var(--daw-text-secondary);
-  font-weight: 400;
-  opacity: 0.6;
-}
-
-.daily-limit-values .total {
-  color: var(--daw-text-secondary);
-  font-weight: 500;
-}
-
-.edit-limit-button {
+.edit-limit-button-small {
   flex-shrink: 0;
+}
+
+.liquid-ball-wrapper {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.liquid-ball-background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(240, 242, 255, 0.8), rgba(250, 250, 254, 0.6));
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+/* 不同状态的背景色 */
+.bg-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(5, 150, 105, 0.05));
+  box-shadow: inset 0 2px 8px rgba(16, 185, 129, 0.1), 0 0 20px rgba(16, 185, 129, 0.1);
+}
+
+.bg-warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(217, 119, 6, 0.05));
+  box-shadow: inset 0 2px 8px rgba(245, 158, 11, 0.1), 0 0 20px rgba(245, 158, 11, 0.1);
+}
+
+.bg-error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(220, 38, 38, 0.05));
+  box-shadow: inset 0 2px 8px rgba(239, 68, 68, 0.1), 0 0 20px rgba(239, 68, 68, 0.1);
+}
+
+.bg-default {
+  background: linear-gradient(135deg, rgba(90, 86, 246, 0.08), rgba(67, 56, 202, 0.05));
+  box-shadow: inset 0 2px 8px rgba(90, 86, 246, 0.1), 0 0 20px rgba(90, 86, 246, 0.1);
+}
+
+.liquid-ball {
+  width: 170px;
+  height: 170px;
+  position: relative;
+  z-index: 1;
+}
+
+.liquid-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 4px 12px rgba(90, 86, 246, 0.15));
+}
+
+/* 波浪动画 */
+.liquid-wave-1 {
+  animation: wave-1 3s ease-in-out infinite;
+}
+
+.liquid-wave-2 {
+  animation: wave-2 3.5s ease-in-out infinite;
+}
+
+@keyframes wave-1 {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-10px);
+  }
+}
+
+@keyframes wave-2 {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(10px);
+  }
+}
+
+/* 文字样式 */
+.liquid-percentage {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 40px;
+  font-weight: 700;
+  fill: #1e293b;
+  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.8));
+}
+
+.liquid-label-text {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  fill: #334155;
+  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.8));
+}
+
+.liquid-label-sub {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  fill: #64748b;
+  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.8));
+}
+
+/* 不同状态的水球样式 */
+.liquid-success .liquid-svg {
+  filter: drop-shadow(0 4px 16px rgba(16, 185, 129, 0.3));
+}
+
+.liquid-warning .liquid-svg {
+  filter: drop-shadow(0 4px 16px rgba(245, 158, 11, 0.3));
+}
+
+.liquid-error .liquid-svg {
+  filter: drop-shadow(0 4px 16px rgba(239, 68, 68, 0.3));
+}
+
+.liquid-default .liquid-svg {
+  filter: drop-shadow(0 4px 16px rgba(90, 86, 246, 0.3));
 }
 
 /* Credit Balance Section */
