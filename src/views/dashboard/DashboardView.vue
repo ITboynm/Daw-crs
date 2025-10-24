@@ -1141,13 +1141,18 @@ const allCreditBalance = computed(() => {
     })
     .filter(credit => credit !== null);
   
-  // 排序：有效的在前，失效的在后；同类按到期时间排序
+  // 排序：使用中的在最前面，然后是有效的，最后是失效的；同类按到期时间排序
   return processedCredits.sort((a, b) => {
-    // 先按是否过期排序
+    // 优先级1：使用中的卡片排在最前面
+    if (a.isActive && !b.isActive) return -1;
+    if (!a.isActive && b.isActive) return 1;
+    
+    // 优先级2：有效的在前，失效的在后
     if (a.isExpired !== b.isExpired) {
       return a.isExpired ? 1 : -1;
     }
-    // 同类按到期时间排序
+    
+    // 优先级3：同类按到期时间排序
     return new Date(a.expires_at) - new Date(b.expires_at);
   });
 });
