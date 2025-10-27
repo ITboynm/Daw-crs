@@ -58,11 +58,13 @@
 
     <n-card class="login-card" :bordered="false">
       <div class="login-card__header">
-        <h2>登录控制台</h2>
-        <p>使用您的 API 密钥访问管理平台</p>
+        <h2>{{ isRegisterMode ? '邮箱注册' : '登录控制台' }}</h2>
+        <p>{{ isRegisterMode ? '通过邮箱获取 API 密钥' : '使用您的 API 密钥访问管理平台' }}</p>
       </div>
 
+      <!-- 登录表单 -->
       <n-form
+        v-if="!isRegisterMode"
         ref="formRef"
         :model="formValue"
         :rules="rules"
@@ -105,6 +107,50 @@
         </n-button>
       </n-form>
 
+      <!-- 注册表单 -->
+      <n-form
+        v-else
+        ref="registerFormRef"
+        :model="registerFormValue"
+        :rules="registerRules"
+        label-placement="top"
+        size="large"
+        class="login-form"
+        @submit.prevent="handleRegister"
+      >
+        <n-form-item label="邮箱地址" path="email">
+          <n-input
+            v-model:value="registerFormValue.email"
+            type="text"
+            placeholder="请输入您的邮箱地址"
+            clearable
+            @keyup.enter="handleRegister"
+          />
+        </n-form-item>
+
+        <n-alert type="info" :bordered="false" style="margin-bottom: 16px;">
+          我们将向此邮箱发送验证码和 API 密钥（邮件稍有延迟，可能在垃圾信箱）
+        </n-alert>
+
+        <n-button
+          type="primary"
+          size="large"
+          block
+          :loading="registerLoading"
+          @click="handleRegister"
+          class="login-button"
+        >
+          {{ registerLoading ? '注册中...' : '邮箱注册' }}
+        </n-button>
+      </n-form>
+
+      <!-- 切换按钮 -->
+      <div class="switch-mode">
+        <n-button text @click="toggleMode" class="switch-mode-button">
+          {{ isRegisterMode ? '← 返回登录' : '没有账号？邮箱注册 →' }}
+        </n-button>
+      </div>
+
       <div class="login-footer">
         <a href="https://api.dawclaudecode.com/docs" target="_blank" class="footer-link">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -136,19 +182,29 @@ import {
   NInput,
   NButton,
   NCheckbox,
+  NAlert,
   useMessage,
 } from 'naive-ui';
 import { useAuthStore } from '@/store/auth';
+import http from '@/utils/httpClient';
 
 const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 const message = useMessage();
 const formRef = ref(null);
+const registerFormRef = ref(null);
 
+const isRegisterMode = ref(false);
+const registerLoading = ref(false);
 const rememberKey = ref(true);
+
 const formValue = reactive({
   apiKey: authStore.apiKey || '',
+});
+
+const registerFormValue = reactive({
+  email: '',
 });
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
@@ -163,6 +219,21 @@ const rules = {
     {
       validator: (_, value) => (value ?? '').trim().startsWith('sk-'),
       message: 'API Key 应以 sk- 开头',
+      trigger: ['input', 'blur'],
+    },
+  ],
+};
+
+const registerRules = {
+  email: [
+    {
+      required: true,
+      message: '请输入邮箱地址',
+      trigger: ['input', 'blur'],
+    },
+    {
+      type: 'email',
+      message: '请输入有效的邮箱地址',
       trigger: ['input', 'blur'],
     },
   ],
@@ -213,6 +284,47 @@ async function pasteFromClipboard() {
     formValue.apiKey = text.trim();
   } catch (error) {
     message.warning('无法访问剪贴板，请手动粘贴。');
+  }
+}
+
+function toggleMode() {
+  isRegisterMode.value = !isRegisterMode.value;
+  // 清空表单
+  if (isRegisterMode.value) {
+    registerFormValue.email = '';
+  }
+}
+
+async function handleRegister() {
+  if (!registerFormRef.value) return;
+
+  try {
+    await registerFormRef.value.validate();
+    registerLoading.value = true;
+
+    const response = await http.post('/x-sign', {
+      email: registerFormValue.email,
+    });
+
+    if (response.data?.success === false) {
+      message.error(response.data.message || '注册失败，请稍后重试');
+    } else {
+      message.success('注册成功！我们已向您的邮箱发送验证码和 API 密钥，请查收（邮件稍有延迟，可能在垃圾信箱）');
+      // 注册成功后切换回登录模式
+      setTimeout(() => {
+        isRegisterMode.value = false;
+      }, 2000);
+    }
+  } catch (error) {
+    if (error?.response?.data?.message) {
+      message.error(error.response.data.message);
+    } else if (error?.message) {
+      message.error(error.message);
+    } else {
+      message.error('注册失败，请稍后重试');
+    }
+  } finally {
+    registerLoading.value = false;
   }
 }
 </script>
@@ -456,6 +568,22 @@ async function pasteFromClipboard() {
   font-weight: 600;
   border-radius: 12px;
   margin-top: 8px;
+}
+
+.switch-mode {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.switch-mode-button {
+  font-size: 0.95rem;
+  color: #5d5ff6;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.switch-mode-button:hover {
+  opacity: 0.8;
 }
 
 .login-footer {
