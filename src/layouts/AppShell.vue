@@ -43,6 +43,8 @@ import {
   MegaphoneOutline,
   BookOutline,
   RefreshOutline,
+  HelpCircleOutline,
+  PricetagOutline,
 } from '@vicons/ionicons5';
 import { useAuthStore } from '@/store/auth';
 import { useNotifications } from '@/composables/useNotifications';
@@ -78,6 +80,13 @@ const navItems = computed(() => {
       label: '总览',
       icon: HomeOutline,
       to: { name: 'dashboard' },
+      group: '控制台',
+    },
+    {
+      key: 'pricing',
+      label: '套餐定价',
+      icon: PricetagOutline,
+      to: { name: 'pricing' },
       group: '控制台',
     },
     {
@@ -138,9 +147,16 @@ const navItems = computed(() => {
     },
     {
       key: 'api-reference',
-      label: 'API 文档',
+      label: '使用教程',
       icon: BookOutline,
       to: { name: 'api-reference' },
+      group: '资源',
+    },
+    {
+      key: 'troubleshooting',
+      label: '常见问题排除',
+      icon: HelpCircleOutline,
+      to: { name: 'troubleshooting' },
       group: '资源',
     },
   ];
