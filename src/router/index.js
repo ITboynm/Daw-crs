@@ -9,6 +9,24 @@ const routes = [
     meta: { public: true, title: '登录 DawAPI' },
   },
   {
+    path: '/public/tutorial',
+    name: 'public-tutorial',
+    component: () => import('@/views/public/PublicApiReferenceView.vue'),
+    meta: { public: true, title: '使用教程' },
+  },
+  {
+    path: '/public/help',
+    name: 'public-help',
+    component: () => import('@/views/public/PublicTroubleshootingView.vue'),
+    meta: { public: true, title: '帮助中心' },
+  },
+  {
+    path: '/public/pricing',
+    name: 'public-pricing',
+    component: () => import('@/views/public/PublicPricingView.vue'),
+    meta: { public: true, title: '套餐定价' },
+  },
+  {
     path: '/',
     component: () => import('@/layouts/AppShell.vue'),
     meta: { requiresAuth: true },

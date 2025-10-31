@@ -1,5 +1,14 @@
 <template>
-  <section class="pricing-view">
+  <div class="public-page-wrapper">
+    <div class="public-header">
+      <div class="brand-section">
+        <img src="@/assets/logo.png" alt="DawAPI" class="logo" />
+        <h1>DawAPI</h1>
+      </div>
+      <a href="/login" class="login-link">返回登录</a>
+    </div>
+
+    <section class="pricing-view">
     <n-card class="pricing-card" :bordered="false">
       <header class="pricing-header">
         <h1>套餐定价</h1>
@@ -736,6 +745,7 @@
       </div>
     </n-modal>
   </section>
+  </div>
 </template>
 
 <script setup>
@@ -751,6 +761,66 @@ function openQrcodeModal() {
 </script>
 
 <style scoped>
+.public-page-wrapper {
+  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+  padding: 24px;
+}
+
+.public-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto 32px;
+  padding: 20px 32px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+
+.brand-section h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.login-link {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #5d5ff6 0%, #7c7ef8 100%);
+  color: white;
+  text-decoration: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.login-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(93, 95, 246, 0.3);
+}
+
+.pricing-view {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
 .pricing-card {
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.95);

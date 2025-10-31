@@ -152,20 +152,26 @@
       </div>
 
       <div class="login-footer">
-        <a href="https://api.dawclaudecode.com/docs" target="_blank" class="footer-link">
+        <a href="/public/tutorial" class="footer-link">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M6.5 2H20V22H6.5A2.5 2.5 0 0 1 4 19.5V4.5A2.5 2.5 0 0 1 6.5 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           使用教程
         </a>
-        <a href="https://dawapi.com/support" target="_blank" class="footer-link">
+        <a href="/public/help" class="footer-link">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
             <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             <path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
           帮助中心
+        </a>
+        <a href="/public/pricing" class="footer-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2V22M17 5H9.5C8.57174 5 7.6815 5.36875 7.02513 6.02513C6.36875 6.6815 6 7.57174 6 8.5C6 9.42826 6.36875 10.3185 7.02513 10.9749C7.6815 11.6313 8.57174 12 9.5 12H14.5C15.4283 12 16.3185 12.3687 16.9749 13.0251C17.6313 13.6815 18 14.5717 18 15.5C18 16.4283 17.6313 17.3185 16.9749 17.9749C16.3185 18.6313 15.4283 19 14.5 19H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          套餐定价
         </a>
       </div>
     </n-card>
@@ -591,8 +597,9 @@ async function handleRegister() {
   padding-top: 32px;
   border-top: 1px solid rgba(226, 232, 240, 0.6);
   display: flex;
-  gap: 32px;
+  gap: 24px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .footer-link {
