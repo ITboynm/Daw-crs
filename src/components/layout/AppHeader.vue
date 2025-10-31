@@ -28,6 +28,18 @@
         {{ roleLabel }}
       </n-tag>
 
+      <!-- 封禁状态标签 -->
+      <n-tag
+        v-if="isSuspended"
+        class="app-header__suspended"
+        size="medium"
+        :bordered="false"
+        round
+        type="error"
+      >
+        已封禁
+      </n-tag>
+
       <div class="app-header__balance" v-if="showBalance">
         <span class="label">余额</span>
         <span class="value">{{ balanceText }}</span>
@@ -188,6 +200,8 @@ const roleTagType = computed(() => {
   return 'default';
 });
 
+const isSuspended = computed(() => authStore.isSuspended);
+
 const pageTitle = computed(() => route.meta?.title || '概览');
 const subtitle = computed(() => {
   const map = {
@@ -341,6 +355,22 @@ watchEffect(() => {
 .app-header__role {
   text-transform: uppercase;
   letter-spacing: 0.12em;
+}
+
+.app-header__suspended {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  animation: pulse-suspended 2s ease-in-out infinite;
+}
+
+@keyframes pulse-suspended {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .app-header__balance {

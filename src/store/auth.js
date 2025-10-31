@@ -30,6 +30,7 @@ export const useAuthStore = defineStore('auth', {
     isRoot: (state) => state.status?.name === 'root',
     displayName: (state) => state.profile?.alias || state.status?.alias || state.status?.name || '访客',
     balance: (state) => state.profile?.balance ?? 0,
+    isSuspended: (state) => state.status?.suspended === true,
   },
   actions: {
     async bootstrap() {
