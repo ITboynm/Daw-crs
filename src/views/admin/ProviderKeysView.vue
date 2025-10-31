@@ -1,104 +1,52 @@
 <template>
   <section class="provider-keys-view">
-    <n-card class="keys-card" :bordered="false">
-      <header class="card-header">
-        <div class="header-left">
-          <div class="title-row">
-            <h2>Provider 密钥</h2>
-            <n-button
-              type="warning"
-              size="medium"
-              :loading="checkingHealth"
-              @click="openHealthDialog"
-              class="health-check-btn"
-            >
-              <template #icon>
-                <span class="btn-icon">🔍</span>
-              </template>
-              查活
-            </n-button>
-          </div>
-          <p>统一查看、筛选、编辑上游模型密钥,支持类型化配置。</p>
+    <!-- 返回顶部按钮 -->
+    <BackToTop />
+    
+    <!-- 顶部操作栏 -->
+    <n-card class="header-card" :bordered="false">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h3 class="page-title">Provider 密钥</h3>
+          <n-select v-model:value="levelFilter" :options="levelOptions" placeholder="Level" clearable style="width: 100px" />
+          <n-select v-model:value="providerFilter" :options="providerOptions" placeholder="Provider" clearable style="width: 130px" />
+          <n-input v-model:value="searchTerm" placeholder="搜索名称" clearable style="width: 140px">
+            <template #prefix><n-icon size="14"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></n-icon></template>
+          </n-input>
         </div>
-        <div class="actions">
-          <n-select
-            v-model:value="levelFilter"
-            size="small"
-            placeholder="Level 筛选"
-            clearable
-            :options="levelOptions"
-            style="width: 140px"
-          />
-          <n-select
-            v-model:value="providerFilter"
-            size="small"
-            placeholder="Provider 筛选"
-            clearable
-            :options="providerOptions"
-            style="width: 200px"
-          />
-          <n-input
-            v-model:value="searchTerm"
-            size="small"
-            placeholder="搜索名称 / Provider"
-            clearable
-            style="width: 220px"
-          />
-          <n-button secondary size="small" :loading="loading" @click="fetchKeys">刷新</n-button>
-          <n-button type="primary" size="small" @click="openCreateDrawer">新增密钥</n-button>
-        </div>
-      </header>
-
-      <div v-if="keys.length" class="keys-table">
-        <div class="table-head">
-          <span>ID</span>
-          <span>名称</span>
-          <span>Provider</span>
-          <span>SecretKey</span>
-          <span>Level</span>
-          <span>状态</span>
-          <span>创建时间</span>
-          <span></span>
-        </div>
-        <div v-for="item in keys" :key="item.id" class="table-row">
-          <span>{{ item.id }}</span>
-          <span>{{ item.name }}</span>
-          <span class="truncate" :title="item.provider">{{ item.provider }}</span>
-          <span class="truncate secret-key" :title="item.secretKey">{{ maskSecretKey(item.secretKey) }}</span>
-          <span>{{ item.level }}</span>
-          <span>
-            <span class="status" :class="item.status ? 'online' : 'offline'">
-              {{ item.status ? '启用' : '禁用' }}
-            </span>
-          </span>
-          <span>{{ formatDateTime(item.createdAt) }}</span>
-          <span class="row-actions">
-            <n-button text size="small" @click="openEditDrawer(item)">编辑</n-button>
-            <n-button text size="small" @click="toggleKey(item)">
-              {{ item.status ? '禁用' : '启用' }}
-            </n-button>
-            <n-button text size="small" type="error" @click="removeKey(item)">删除</n-button>
-          </span>
+        <div class="toolbar-right">
+          <n-button type="warning" :loading="checkingHealth" @click="openHealthDialog">查活</n-button>
+          <n-button type="primary" @click="openCreateDrawer">新增密钥</n-button>
+          <n-button secondary :loading="loading" @click="fetchKeys">刷新</n-button>
         </div>
       </div>
-      <div v-else class="empty-state">
-        <p>暂无密钥记录,点击右上角"新增密钥"开始配置。</p>
-      </div>
+    </n-card>
 
-      <!-- 分页组件 - 前端分页 -->
-      <div v-if="total > 0" class="pagination-wrapper">
+    <!-- 数据表格 -->
+    <n-card class="table-card" :bordered="false">
+      <div class="table-content">
+        <n-data-table
+          :columns="columns"
+          :data="keys"
+          :loading="loading"
+          :pagination="false"
+          :bordered="false"
+          :single-line="false"
+          :scroll-x="1400"
+          striped
+        />
+      </div>
+      
+      <!-- 分页 -->
+      <div v-if="total > 0" class="table-footer">
+        <span class="footer-total">共 {{ total }} 条</span>
         <n-pagination
           v-model:page="currentPage"
           v-model:page-size="pageSize"
           :item-count="total"
           :page-sizes="[10, 20, 50, 100]"
           show-size-picker
-          show-quick-jumper
-        >
-          <template #prefix="{ itemCount }">
-            共 {{ itemCount }} 条
-          </template>
-        </n-pagination>
+        />
       </div>
     </n-card>
 
@@ -272,14 +220,16 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, h, onMounted, reactive, ref, watch } from 'vue';
 import {
   NButton,
   NCard,
+  NDataTable,
   NDrawer,
   NDrawerContent,
   NForm,
   NFormItem,
+  NIcon,
   NInput,
   NInputNumber,
   NModal,
@@ -287,8 +237,18 @@ import {
   NSelect,
   NSpin,
   NSwitch,
+  NTag,
   useMessage,
 } from 'naive-ui';
+import {
+  SearchOutline,
+  AddOutline,
+  RefreshOutline,
+  PencilOutline,
+  TrashOutline,
+  PowerOutline,
+} from '@vicons/ionicons5';
+import BackToTop from '@/components/common/BackToTop.vue';
 import {
   listProviderKeys,
   createProviderKey,
@@ -392,6 +352,117 @@ const keys = computed(() => {
 // 总数
 const total = computed(() => filteredKeys.value.length);
 
+// 表格列配置
+const columns = computed(() => [
+  {
+    title: 'ID',
+    key: 'id',
+    width: 80,
+  },
+  {
+    title: '名称',
+    key: 'name',
+    width: 150,
+  },
+  {
+    title: 'Provider',
+    key: 'provider',
+    width: 200,
+    ellipsis: {
+      tooltip: true,
+    },
+  },
+  {
+    title: 'SecretKey',
+    key: 'secretKey',
+    width: 200,
+    ellipsis: {
+      tooltip: true,
+    },
+    render: (row) => maskSecretKey(row.secretKey),
+  },
+  {
+    title: 'Level',
+    key: 'level',
+    width: 80,
+  },
+  {
+    title: '状态',
+    key: 'status',
+    width: 100,
+    render: (row) => {
+      return h(
+        NTag,
+        {
+          type: row.status ? 'success' : 'error',
+          size: 'small',
+          bordered: false,
+        },
+        { default: () => row.status ? '启用' : '禁用' }
+      );
+    },
+  },
+  {
+    title: '创建时间',
+    key: 'createdAt',
+    width: 160,
+    render: (row) => formatDateTime(row.createdAt),
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 210,
+    fixed: 'right',
+    render: (row) => {
+      return h(
+        'div',
+        { class: 'row-actions', style: 'display: flex; gap: 6px;' },
+        [
+          h(
+            NButton,
+            {
+              size: 'tiny',
+              type: 'primary',
+              onClick: () => openEditDrawer(row),
+              style: 'margin: 0;'
+            },
+            {
+              default: () => '编辑',
+              icon: () => h(NIcon, null, { default: () => h(PencilOutline) })
+            }
+          ),
+          h(
+            NButton,
+            {
+              size: 'tiny',
+              type: row.status ? 'warning' : 'success',
+              onClick: () => toggleKey(row),
+              style: 'margin: 0;'
+            },
+            {
+              default: () => (row.status ? '禁用' : '启用'),
+              icon: () => h(NIcon, null, { default: () => h(PowerOutline) })
+            }
+          ),
+          h(
+            NButton,
+            {
+              size: 'tiny',
+              type: 'error',
+              onClick: () => removeKey(row),
+              style: 'margin: 0;'
+            },
+            {
+              default: () => '删除',
+              icon: () => h(NIcon, null, { default: () => h(TrashOutline) })
+            }
+          ),
+        ]
+      );
+    },
+  },
+]);
+
 const providerOptions = computed(() => {
   const providers = [...new Set(allKeys.value.map(k => k.provider))].filter(Boolean);
   return providers.map(provider => ({
@@ -407,6 +478,14 @@ onMounted(() => {
 // 监听筛选条件变化,重置到第一页（前端分页，不需要重新加载数据）
 watch([levelFilter, providerFilter, searchTerm], () => {
   currentPage.value = 1;
+});
+
+// 监听分页变化，表格内部滚动到顶部
+watch([currentPage, pageSize], () => {
+  const tableWrapper = document.querySelector('.table-scroll-wrapper');
+  if (tableWrapper) {
+    tableWrapper.scrollTop = 0;
+  }
 });
 
 function resetForm() {
@@ -618,19 +697,81 @@ function renderTypeLabel(type) {
 
 <style scoped>
 .provider-keys-view {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
-.keys-card {
-  border-radius: 26px;
-  background: var(--daw-surface);
-  box-shadow: var(--daw-shadow-md);
-  padding: 24px 28px;
+.header-card {
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.header-card :deep(.n-card__content) {
+  padding: 16px 20px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+}
+
+.table-card {
+  flex: 1;
+  min-height: 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+}
+
+.table-card :deep(.n-card__content) {
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.table-content :deep(.n-data-table-thead) {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.table-content :deep(.n-data-table-th) {
+  background: #ffffff !important;
 }
 
 .card-header {
@@ -686,33 +827,50 @@ function renderTypeLabel(type) {
 }
 
 .keys-table {
-  display: grid;
-  gap: 12px;
-  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
-}
-
-.table-head,
-.table-row {
-  display: grid;
-  grid-template-columns: 0.6fr 1fr 1.6fr 1.4fr 0.6fr 0.7fr 1fr 1.2fr;
-  gap: 12px;
-  align-items: center;
-  min-width: 1000px;
+  padding: 12px 16px;
 }
 
 .table-head {
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
+  display: grid;
+  grid-template-columns: 0.6fr 1fr 1.6fr 1.4fr 0.6fr 0.7fr 1fr 1.2fr;
+  gap: 16px;
+  align-items: center;
+  min-width: 1000px;
+  flex-shrink: 0;
+  background: #ffffff;
+  padding: 16px 32px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
   text-transform: uppercase;
-  color: var(--daw-text-secondary);
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .table-row {
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: rgba(247, 248, 253, 0.9);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  display: grid;
+  grid-template-columns: 0.6fr 1fr 1.6fr 1.4fr 0.6fr 0.7fr 1fr 1.2fr;
+  gap: 16px;
+  align-items: center;
+  min-width: 1000px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.table-row:hover {
+  background: #f9fafb;
+  border-color: #5a56f6;
+  box-shadow: 0 4px 12px rgba(90, 86, 246, 0.1);
+  transform: translateY(-1px);
 }
 
 .truncate {
@@ -728,30 +886,93 @@ function renderTypeLabel(type) {
   color: var(--daw-text-secondary);
 }
 
-.status {
-  display: inline-flex;
+/* 操作按钮样式 */
+.row-actions {
+  display: flex;
+  gap: 8px;
   align-items: center;
-  justify-content: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
+  flex-wrap: nowrap;
 }
 
-.status.online {
-  background: rgba(34, 197, 94, 0.18);
-  color: #16a34a;
+.row-actions :deep(.n-button) {
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 0 10px;
+  height: 26px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin-right: 0 !important;
 }
 
-.status.offline {
-  background: rgba(239, 68, 68, 0.18);
-  color: #ef4444;
+.row-actions :deep(.n-button:not(:last-child)) {
+  margin-right: 8px;
+}
+
+.row-actions :deep(.n-button:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.row-actions :deep(.n-button:active) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.row-actions :deep(.n-button .n-button__icon) {
+  font-size: 12px;
+  margin-right: 2px;
+}
+
+.row-actions :deep(.n-button--primary-type) {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+}
+
+.row-actions :deep(.n-button--primary-type:hover) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.row-actions :deep(.n-button--warning-type) {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border: none;
+}
+
+.row-actions :deep(.n-button--warning-type:hover) {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.row-actions :deep(.n-button--success-type) {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+}
+
+.row-actions :deep(.n-button--success-type:hover) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.row-actions :deep(.n-button--error-type) {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+}
+
+.row-actions :deep(.n-button--error-type:hover) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .row-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.row-actions :deep(.n-button) {
+  font-weight: 500;
 }
 
 .empty-state {
@@ -765,10 +986,35 @@ function renderTypeLabel(type) {
   background: rgba(248, 250, 255, 0.7);
 }
 
-.pagination-wrapper {
+.table-container {
   display: flex;
-  justify-content: center;
-  margin-top: 8px;
+  flex-direction: column;
+  height: 650px;
+  max-height: 70vh;
+}
+
+.table-scroll-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.table-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 2px solid #e5e7eb;
+  background: #f9fafb;
+  min-height: 64px;
+}
+
+.footer-total {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  line-height: 1.5;
 }
 
 .drawer-form {

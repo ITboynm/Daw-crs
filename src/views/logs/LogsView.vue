@@ -1,110 +1,41 @@
 <template>
   <section class="logs-view">
+    <!-- 返回顶部按钮 -->
+    <BackToTop />
+    
     <!-- 顶部操作栏 -->
     <n-card class="header-card" :bordered="false">
-      <div class="header-content">
-        <div class="header-info">
-          <div class="icon-wrapper">
-            <svg class="header-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-          </div>
-          <div>
-            <h2>操作日志</h2>
-            <p>实时追踪敏感操作，支持关键词搜索与动作过滤</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <n-input
-            v-model:value="searchTerm"
-            placeholder="搜索用户名、IP、详情"
-            clearable
-            style="width: 280px"
-          >
-            <template #prefix>
-              <n-icon>
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-              </n-icon>
-            </template>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h3 class="page-title">操作日志</h3>
+          <n-select 
+            v-model:value="selectedAction" 
+            :options="actionSelectOptions" 
+            placeholder="操作类型" 
+            clearable 
+            style="width: 140px"
+            @update:value="handleActionChange"
+          />
+          <n-input v-model:value="searchTerm" placeholder="搜索用户、IP" clearable style="width: 180px">
+            <template #prefix><n-icon size="14"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></n-icon></template>
           </n-input>
-          <n-button secondary :loading="loading" @click="fetchLogs">
-            <template #icon>
-              <n-icon>
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-              </n-icon>
-            </template>
-            刷新
-          </n-button>
+          <n-input v-model:value="filterTargetId" placeholder="目标ID" clearable style="width: 120px" />
+          <n-select v-model:value="filterStatus" :options="statusOptions" clearable placeholder="状态" style="width: 100px" />
         </div>
-      </div>
-
-      <!-- 动作过滤器 -->
-      <div class="action-filter">
-        <div class="filter-row">
-          <div class="filter-chips">
-            <button
-              type="button"
-              class="action-chip"
-              :class="{ active: !selectedAction }"
-              @click="toggleAction('')"
-            >
-              <svg class="chip-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-              </svg>
-              全部
-            </button>
-            <button
-              v-for="action in actionOptions"
-              :key="action"
-              type="button"
-              class="action-chip"
-              :class="{ active: action === selectedAction }"
-              @click="toggleAction(action)"
-            >
-              <component :is="getActionIcon(action)" class="chip-icon" />
-              {{ formatAction(action) }}
-            </button>
-          </div>
-
-          <div class="filter-controls">
-            <div class="filter-item">
-              <span class="filter-label">目标ID</span>
-              <n-input
-                v-model:value="filterTargetId"
-                placeholder="筛选目标ID"
-                clearable
-                style="width: 160px"
-                size="small"
-              />
-            </div>
-            <div class="filter-item">
-              <span class="filter-label">状态</span>
-              <n-select
-                v-model:value="filterStatus"
-                :options="statusOptions"
-                clearable
-                placeholder="全部"
-                style="width: 120px"
-                size="small"
-              />
-            </div>
-            <n-button type="primary" size="small" @click="applyFilters" :loading="loading">
-              应用筛选
-            </n-button>
-            <n-button size="small" @click="resetFilters">
-              重置
-            </n-button>
-          </div>
+        <div class="toolbar-right">
+          <n-button type="primary" @click="applyFilters" :loading="loading">查询</n-button>
+          <n-button @click="resetFilters">重置</n-button>
+          <n-button secondary :loading="loading" @click="fetchLogs">刷新</n-button>
         </div>
       </div>
     </n-card>
 
-    <!-- 日志列表 -->
-    <div class="logs-container">
+    <!-- 日志列表容器（固定高度） -->
+    <n-card class="logs-container-card" :bordered="false">
+      <div class="logs-container-header">
+        <span class="logs-count">共 {{ totalCount }} 条记录</span>
+      </div>
+      <div class="logs-container">
       <div v-if="logs.length" class="logs-timeline">
         <div v-for="(log, index) in logs" :key="log.id" class="log-item" :class="{ selected: selectedLog?.id === log.id }" @click="selectLog(log)">
           <div class="log-indicator">
@@ -169,25 +100,23 @@
         <p>没有匹配的日志记录</p>
       </div>
 
+      </div>
+      
       <!-- 分页 -->
-      <div v-if="totalCount > 0" class="pagination-wrapper">
+      <div v-if="totalCount > 0" class="logs-pagination">
+        <span class="pagination-total">共 {{ totalCount }} 条</span>
         <n-pagination
           v-model:page="currentPage"
           v-model:page-size="pageSize"
-          :page-count="pageCount"
           :item-count="totalCount"
           :page-sizes="pageSizes"
           show-size-picker
           show-quick-jumper
           @update:page="handlePageChange"
           @update:page-size="handlePageSizeChange"
-        >
-          <template #prefix="{ itemCount }">
-            共 {{ itemCount }} 条
-          </template>
-        </n-pagination>
+        />
       </div>
-    </div>
+    </n-card>
 
     <!-- 详情模态框 -->
     <n-modal
@@ -228,6 +157,7 @@ import { computed, onMounted, ref, h } from 'vue';
 import { useMessage, NCard, NButton, NInput, NIcon, NTag, NModal, NDescriptions, NDescriptionsItem, NSelect, NPagination } from 'naive-ui';
 import { getLogs } from '@/api/dashboard';
 import { formatDateTime } from '@/utils/formatters';
+import BackToTop from '@/components/common/BackToTop.vue';
 
 const message = useMessage();
 
@@ -290,31 +220,31 @@ async function fetchLogs() {
   }
 }
 
-const actionOptions = computed(() => {
+// 操作类型选项（用于下拉）
+const actionSelectOptions = computed(() => {
   const allActions = [
     'add_user',
     'recharge_user',
     'update_user',
     'delete_user',
-    'get_users',
-    'login',
-    'rotate_self',
-    'add_key',
-    'update_key',
-    'delete_key',
-    'update_config',
-    'create_news',
-    'auto_config',
+    'get_user_info',
+    'add_provider',
+    'update_provider',
+    'delete_provider',
+    'rotate_password',
+    'dynamic_balance',
+    'login'
   ];
-  return allActions;
+  
+  return allActions.map(action => ({
+    label: formatAction(action),
+    value: action
+  }));
 });
 
-function toggleAction(action) {
-  if (selectedAction.value === action) {
-    selectedAction.value = '';
-  } else {
-    selectedAction.value = action;
-  }
+
+function handleActionChange(value) {
+  selectedAction.value = value || '';
   currentPage.value = 1;
   fetchLogs();
 }
@@ -335,7 +265,11 @@ function resetFilters() {
 function handlePageChange(page) {
   currentPage.value = page;
   fetchLogs();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // 列表内部滚动到顶部
+  const logsContainer = document.querySelector('.logs-container');
+  if (logsContainer) {
+    logsContainer.scrollTop = 0;
+  }
 }
 
 function handlePageSizeChange(size) {
@@ -432,162 +366,134 @@ const prettyDetails = computed(() => {
 
 <style scoped>
 .logs-view {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
 /* 顶部卡片 */
 .header-card {
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 2px 12px rgba(94, 92, 230, 0.08);
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e5e7eb;
 }
 
-.header-content {
+.header-card :deep(.n-card__content) {
+  padding: 16px 20px;
+}
+
+.toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-
-.header-info {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.icon-wrapper {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(94, 92, 230, 0.12), rgba(139, 92, 246, 0.08));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.header-icon {
-  width: 28px;
-  height: 28px;
-  color: var(--daw-primary);
-}
-
-.header-info h2 {
-  margin: 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #5e5ce6, #8b5cf6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.header-info p {
-  margin: 6px 0 0;
-  color: var(--daw-text-secondary);
-  font-size: 0.92rem;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
   gap: 12px;
-}
-
-/* 动作过滤器 */
-.action-filter {
-  padding-top: 16px;
-  border-top: 1px solid rgba(226, 232, 240, 0.6);
-}
-
-.filter-row {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.filter-chips {
-  display: flex;
   flex-wrap: wrap;
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
   gap: 10px;
-}
-
-.filter-controls {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
   flex-wrap: wrap;
 }
 
-.filter-item {
+.page-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+}
+
+
+/* 日志容器卡片 */
+.logs-container-card {
+  flex: 1;
+  min-height: 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  overflow: hidden;
 }
 
-.filter-label {
-  font-size: 0.8rem;
-  color: var(--daw-text-secondary);
-  font-weight: 500;
+.logs-container-card :deep(.n-card__content) {
+  padding: 16px 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.action-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(94, 92, 230, 0.15);
-  background: rgba(246, 244, 255, 0.4);
-  padding: 8px 16px;
-  border-radius: 14px;
-  font-size: 0.88rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  color: var(--daw-text);
-}
-
-.action-chip:hover {
-  background: rgba(94, 92, 230, 0.08);
-  border-color: rgba(94, 92, 230, 0.25);
-  transform: translateY(-1px);
-}
-
-.action-chip.active {
-  background: linear-gradient(135deg, rgba(94, 92, 230, 0.15), rgba(139, 92, 246, 0.12));
-  border-color: rgba(94, 92, 230, 0.35);
-  color: var(--daw-primary);
-  box-shadow: 0 2px 8px rgba(94, 92, 230, 0.12);
-}
-
-.chip-icon {
-  width: 16px;
-  height: 16px;
+.logs-container-header {
   flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-/* 日志容器 */
+.logs-count {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+/* 日志容器（可滚动区域） */
 .logs-container {
-  min-height: 400px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 10px;
+  padding-right: 8px;
+  margin-right: -8px;
 }
 
-/* 分页 */
-.pagination-wrapper {
+/* 美化日志容器滚动条 */
+.logs-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.logs-container::-webkit-scrollbar-track {
+  background: rgba(240, 242, 255, 0.4);
+  border-radius: 4px;
+}
+
+.logs-container::-webkit-scrollbar-thumb {
+  background: rgba(94, 92, 230, 0.3);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.logs-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(94, 92, 230, 0.5);
+}
+
+/* 分页区域 */
+.logs-pagination {
+  flex-shrink: 0;
   display: flex;
-  justify-content: center;
-  padding: 24px 0;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  box-shadow: 0 2px 12px rgba(94, 92, 230, 0.08);
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0 0;
+  border-top: 2px solid #e5e7eb;
+  margin-top: 12px;
+}
+
+.pagination-total {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
 }
 
 /* Timeline 布局 */
@@ -599,19 +505,20 @@ const prettyDetails = computed(() => {
 
 .log-item {
   display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 20px;
+  grid-template-columns: 24px 1fr;
+  gap: 12px;
   cursor: pointer;
   transition: opacity 0.2s;
 }
 
 .log-item:hover {
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .log-item.selected .log-card {
-  border-color: rgba(94, 92, 230, 0.3);
-  box-shadow: 0 4px 16px rgba(94, 92, 230, 0.12);
+  border-color: rgba(94, 92, 230, 0.4);
+  box-shadow: 0 2px 12px rgba(94, 92, 230, 0.12);
+  background: rgba(248, 250, 255, 0.5);
 }
 
 /* Timeline 指示器 */
@@ -619,122 +526,125 @@ const prettyDetails = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 24px;
+  padding-top: 12px;
 }
 
 .indicator-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
   background: linear-gradient(135deg, #5e5ce6, #8b5cf6);
   border: 2px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 2px 6px rgba(94, 92, 230, 0.25);
+  box-shadow: 0 1px 4px rgba(94, 92, 230, 0.2);
   z-index: 1;
 }
 
 .indicator-line {
   width: 2px;
   flex: 1;
-  background: linear-gradient(180deg, rgba(203, 213, 225, 0.5), rgba(203, 213, 225, 0.2));
-  margin-top: 4px;
+  background: linear-gradient(180deg, rgba(203, 213, 225, 0.4), rgba(203, 213, 225, 0.15));
+  margin-top: 3px;
 }
 
 /* 日志卡片 */
 .log-card {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(226, 232, 240, 0.5);
-  border-radius: 20px;
-  padding: 20px 24px;
-  margin-bottom: 16px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
 }
 
 .log-card:hover {
-  border-color: rgba(94, 92, 230, 0.2);
-  box-shadow: 0 4px 12px rgba(94, 92, 230, 0.08);
-  transform: translateX(4px);
+  background: #fff;
+  border-color: #d1d5db;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .log-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  gap: 16px;
+  margin-bottom: 8px;
+  gap: 8px;
 }
 
 .log-action {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 .action-icon {
-  width: 22px;
-  height: 22px;
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
-  padding: 6px;
-  border-radius: 10px;
   color: var(--daw-primary);
-  background: rgba(94, 92, 230, 0.1);
 }
 
 .action-text {
   font-weight: 600;
-  font-size: 1rem;
-  color: var(--daw-text);
+  font-size: 14px;
+  color: #262626;
 }
 
 .log-time {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: var(--daw-text-secondary);
+  gap: 4px;
+  font-size: 13px;
+  color: rgba(0,0,0,0.45);
 }
 
 .time-icon {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 /* 日志信息 */
 .log-body {
-  padding-top: 12px;
-  border-top: 1px solid rgba(226, 232, 240, 0.4);
+  padding-top: 6px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .log-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .info-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.88rem;
+  gap: 4px;
+  font-size: 13px;
+  padding: 3px 10px;
+  background: #fff;
+  border-radius: 2px;
+  border: 1px solid #f0f0f0;
 }
 
 .info-icon {
-  width: 16px;
-  height: 16px;
-  color: rgba(94, 92, 230, 0.6);
+  width: 12px;
+  height: 12px;
+  color: rgba(0,0,0,0.45);
   flex-shrink: 0;
 }
 
 .info-label {
-  color: var(--daw-text-secondary);
-  font-weight: 500;
+  color: rgba(0,0,0,0.45);
+  font-weight: 400;
 }
 
 .info-value {
-  color: var(--daw-text);
-  font-weight: 600;
-  word-break: break-all;
+  color: #262626;
+  font-weight: 500;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 空状态 */

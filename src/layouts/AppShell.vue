@@ -231,28 +231,33 @@ function handleLogout() {
   bottom: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 32px 40px 48px;
+  padding: 16px 24px;
 }
 
 /* 自定义滚动条 */
 .app-shell__content::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 .app-shell__content::-webkit-scrollbar-track {
-  background: rgba(240, 242, 255, 0.3);
-  border-radius: 4px;
+  background: rgba(240, 242, 255, 0.4);
+  border-radius: 5px;
 }
 
 .app-shell__content::-webkit-scrollbar-thumb {
-  background: rgba(203, 213, 225, 0.5);
-  border-radius: 4px;
+  background: rgba(94, 92, 230, 0.3);
+  border-radius: 5px;
   transition: background 0.2s;
 }
 
 .app-shell__content::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.75);
+  background: rgba(94, 92, 230, 0.5);
+}
+
+/* 平滑滚动 */
+.app-shell__content {
+  scroll-behavior: smooth;
 }
 
 @media (max-width: 960px) {

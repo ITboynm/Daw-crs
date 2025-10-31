@@ -1,5 +1,8 @@
 <template>
   <section class="api-key-insights-view">
+    <!-- 返回顶部按钮 -->
+    <BackToTop />
+    
     <!-- 查询卡片 -->
     <n-card class="query-card" :bordered="false">
       <div class="card-header">
@@ -99,6 +102,7 @@
         :bordered="false"
         :single-line="false"
         :scroll-x="1600"
+        :max-height="600"
         striped
         size="small"
       />
@@ -247,6 +251,7 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { getLiveStatusWithKey } from '@/api/dashboard';
 import { formatCurrency, formatNumber, formatDateTime, maskApiKey } from '@/utils/formatters';
+import BackToTop from '@/components/common/BackToTop.vue';
 
 const message = useMessage();
 const authStore = useAuthStore();

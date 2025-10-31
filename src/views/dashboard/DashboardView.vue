@@ -1,5 +1,8 @@
 <template>
   <section class="dashboard-view">
+    <!-- 返回顶部按钮 -->
+    <BackToTop />
+    
     <div class="dashboard-hero">
       <div class="hero-unified">
         <div class="hero-header">
@@ -564,6 +567,7 @@ import { rotateSelfKey as rotateSelfKeyApi } from '@/api/accounts';
 import { formatCurrency, formatNumber, formatDateTime, diffFromNow, maskApiKey } from '@/utils/formatters';
 import { useMessage } from 'naive-ui';
 import { setAuthToken, disable401Handling, enable401Handling } from '@/utils/httpClient';
+import BackToTop from '@/components/common/BackToTop.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();

@@ -1,128 +1,77 @@
 <template>
   <section class="account-tools-view">
+    <!-- 返回顶部按钮 -->
+    <BackToTop />
+    
     <!-- 顶部操作栏 -->
     <n-card class="header-card" :bordered="false">
-      <div class="header-content">
-        <div class="header-info">
-          <h2>子账户管理</h2>
-          <p>统一管理所有子账户，支持创建、编辑、充值/扣钱、删除等操作</p>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h3 class="page-title">子账户管理</h3>
+          <n-input v-model:value="searchName" placeholder="搜索用户名" clearable style="width: 120px">
+            <template #prefix><n-icon size="14"><SearchOutline /></n-icon></template>
+          </n-input>
+          <n-input v-model:value="searchEmail" placeholder="搜索邮箱" clearable style="width: 140px">
+            <template #prefix><n-icon size="14"><SearchOutline /></n-icon></template>
+          </n-input>
+          <n-input v-model:value="searchId" placeholder="ID" clearable style="width: 100px">
+            <template #prefix><n-icon size="14"><SearchOutline /></n-icon></template>
+          </n-input>
+          <n-input-number v-model:value="filterForm.level" :min="0" :max="9" placeholder="Level" clearable style="width: 100px" />
+          <n-input v-model:value="filterForm.identifier" placeholder="特殊过滤器（L2/G1/R3等）" clearable style="width: 200px">
+            <template #suffix>
+              <n-popover trigger="hover" placement="top">
+                <template #trigger><n-icon size="14" style="cursor: help"><InformationCircleOutline /></n-icon></template>
+                <div style="max-width: 280px; font-size: 12px">
+                  <p style="margin: 0 0 6px 0; font-weight: 600">支持的特殊过滤器:</p>
+                  <ul style="margin: 0; padding-left: 16px">
+                    <li>L{n} - Level (如: L2)</li>
+                    <li>G{n} - Gear (如: G1)</li>
+                    <li>R{n} - Role (如: R3)</li>
+                    <li>T{n} - Tier (如: T2)</li>
+                    <li>F{n} - Factor (如: F1.5)</li>
+                    <li>.{dna} - DNA 路径 (如: .1.42.)</li>
+                  </ul>
+                </div>
+              </n-popover>
+            </template>
+          </n-input>
         </div>
-        <div class="header-actions">
-          <n-input
-            v-model:value="searchName"
-            placeholder="搜索用户名"
-            clearable
-            style="width: 160px"
-          >
-            <template #prefix>
-              <n-icon><SearchOutline /></n-icon>
-            </template>
-          </n-input>
-          <n-input
-            v-model:value="searchEmail"
-            placeholder="搜索邮箱"
-            clearable
-            style="width: 180px"
-          >
-            <template #prefix>
-              <n-icon><SearchOutline /></n-icon>
-            </template>
-          </n-input>
-          <n-input
-            v-model:value="searchId"
-            placeholder="搜索ID"
-            clearable
-            style="width: 120px"
-          >
-            <template #prefix>
-              <n-icon><SearchOutline /></n-icon>
-            </template>
-          </n-input>
-          <n-button type="primary" @click="openCreateModal">
-            <template #icon>
-              <n-icon><AddOutline /></n-icon>
-            </template>
-            新增子账户
-          </n-button>
-          <n-button secondary @click="refreshList" :loading="loading">
-            <template #icon>
-              <n-icon><RefreshOutline /></n-icon>
-            </template>
-            刷新
-          </n-button>
-        </div>
-      </div>
-
-      <!-- 筛选条件 -->
-      <n-divider style="margin: 20px 0" />
-      <div class="filter-section">
-        <div class="filter-row">
-          <div class="filter-item">
-            <span class="filter-label">Level 筛选</span>
-            <n-input-number
-              v-model:value="filterForm.level"
-              :min="0"
-              :max="9"
-              placeholder="0-9"
-              clearable
-              style="width: 120px"
-            />
-          </div>
-          <div class="filter-item">
-            <span class="filter-label">特殊过滤器</span>
-            <n-input
-              v-model:value="filterForm.identifier"
-              placeholder="L2, G1, R3, T2, F1.5, .1.42., email等"
-              clearable
-              style="width: 320px"
-            >
-              <template #suffix>
-                <n-popover trigger="hover" placement="top">
-                  <template #trigger>
-                    <n-icon style="cursor: help"><InformationCircleOutline /></n-icon>
-                  </template>
-                  <div style="max-width: 300px">
-                    <p style="margin: 0 0 8px 0; font-weight: 600">支持的特殊过滤器:</p>
-                    <ul style="margin: 0; padding-left: 20px; font-size: 0.85rem">
-                      <li>L{n} - 按 Level 筛选 (如: L2)</li>
-                      <li>G{n} - 按 Gear 筛选 (如: G1)</li>
-                      <li>R{n} - 按 Role 筛选 (如: R3)</li>
-                      <li>T{n} - 按 Tier 筛选 (如: T2)</li>
-                      <li>F{n} - 按 Factor 筛选 (如: F1.5)</li>
-                      <li>.{dna} - 按 DNA 路径筛选 (如: .1.42.)</li>
-                      <li>{email} - 按邮箱筛选</li>
-                      <li>{id} - 按 ID 筛选</li>
-                      <li>{name} - 按用户名筛选</li>
-                    </ul>
-                  </div>
-                </n-popover>
-              </template>
-            </n-input>
-          </div>
-          <div class="filter-buttons">
-            <n-button type="primary" @click="applyFilters" :loading="loading">
-              应用筛选
-            </n-button>
-            <n-button @click="resetFilters">
-              重置
-            </n-button>
-          </div>
+        <div class="toolbar-right">
+          <n-button type="primary" @click="applyFilters" :loading="loading">查询</n-button>
+          <n-button @click="resetFilters">重置</n-button>
+          <n-button type="primary" @click="openCreateModal">新增子账户</n-button>
+          <n-button secondary @click="refreshList" :loading="loading">刷新</n-button>
         </div>
       </div>
     </n-card>
 
-    <!-- 账户列表 -->
+    <!-- 数据表格 -->
     <n-card class="table-card" :bordered="false">
-      <n-data-table
-        :columns="columns"
-        :data="filteredAccounts"
-        :loading="loading"
-        :pagination="pagination"
-        :bordered="false"
-        :single-line="false"
-        :scroll-x="1640"
-        striped
-      />
+      <div class="table-content">
+        <n-data-table
+          :columns="columns"
+          :data="filteredAccounts"
+          :loading="loading"
+          :pagination="false"
+          :bordered="false"
+          :single-line="false"
+          :scroll-x="1640"
+          striped
+        />
+      </div>
+      
+      <!-- 分页 -->
+      <div v-if="totalCount > 0" class="table-footer">
+        <span class="footer-total">共 {{ totalCount }} 条</span>
+        <n-pagination
+          v-model:page="currentPage"
+          v-model:page-size="pageSize"
+          :item-count="totalCount"
+          :page-sizes="[10, 20, 50, 100]"
+          show-size-picker
+        />
+      </div>
     </n-card>
 
     <!-- 创建子账户模态框 -->
@@ -174,278 +123,424 @@
     <n-modal
       v-model:show="editModalVisible"
       preset="card"
-      title="编辑子账户设置"
       size="huge"
       :mask-closable="false"
-      style="max-width: 900px"
+      style="max-width: 1100px"
+      class="edit-account-modal"
     >
-      <div style="margin-bottom: 16px">
-        <n-alert type="info" :show-icon="false">
-          账户: <strong>{{ currentAccount?.Name || currentAccount?.name }}</strong> ({{ currentAccount?.Email || currentAccount?.email }})
-        </n-alert>
-      </div>
-      <div v-if="isRoot" class="root-package-action">
-        <n-button size="small" type="warning" ghost @click="openPackageModal()">
-          <template #icon>
-            <n-icon><TimeOutline /></n-icon>
-          </template>
-          变更套餐到期时间
-        </n-button>
-      </div>
+      <template #header>
+        <div class="modal-header-content">
+          <div class="header-left">
+            <h3 class="modal-main-title">编辑子账户</h3>
+            <div class="header-account-info">
+              <span class="account-name">{{ currentAccount?.Name || currentAccount?.name }}</span>
+              <span class="account-email">{{ currentAccount?.Email || currentAccount?.email }}</span>
+            </div>
+          </div>
+          <n-button v-if="isRoot" size="small" type="warning" ghost @click="openPackageModal()">
+            <template #icon><n-icon><TimeOutline /></n-icon></template>
+            变更套餐
+          </n-button>
+        </div>
+      </template>
 
-      <n-tabs type="line" animated>
+      <!-- Tab 内容区域 -->
+      <n-tabs type="line" animated class="edit-tabs">
         <!-- 基础信息 Tab -->
-        <n-tab-pane name="basic" tab="基础信息">
-          <n-form :model="editForm" label-placement="left" label-width="100" style="padding: 16px 0">
-            <div class="form-grid-2">
-              <n-form-item label="显示别名">
-                <n-input v-model:value="editForm.alias" placeholder="控制台展示名称" />
-              </n-form-item>
-              <n-form-item label="账户状态">
-                <n-select
-                  v-model:value="editForm.status"
-                  :options="[
-                    { label: '不修改', value: null },
-                    { label: '启用', value: true },
-                    { label: '禁用', value: false }
-                  ]"
-                />
-              </n-form-item>
+        <n-tab-pane name="basic">
+          <template #tab>
+            <div class="tab-title">
+              <n-icon size="16"><CreateOutline /></n-icon>
+              <span>基础信息</span>
             </div>
-            <n-form-item label="账户邮箱">
-              <n-input v-model:value="editForm.email" placeholder="用于登录的邮箱地址" />
-            </n-form-item>
-            <n-form-item label="账单邮箱">
-              <n-input v-model:value="editForm.billingEmail" placeholder="接收账单通知的邮箱" />
-            </n-form-item>
-            <div class="form-grid-3">
-              <n-form-item label="允许的分组">
-                <n-input-number v-model:value="editForm.level" :min="0" style="width: 100%" placeholder="Level" />
-              </n-form-item>
-              <n-form-item label="角色权限">
-                <n-input-number v-model:value="editForm.role" :min="0" style="width: 100%" placeholder="Role" />
-              </n-form-item>
-              <n-form-item label="档位配置">
-                <n-input-number v-model:value="editForm.gear" :min="0" style="width: 100%" placeholder="Gear" />
-              </n-form-item>
-            </div>
-            <div class="form-grid-2">
-              <n-form-item label="费率倍数">
-                <n-input-number v-model:value="editForm.rates" :min="0" :step="0.1" style="width: 100%" placeholder="计费倍率" />
-              </n-form-item>
-              <n-form-item label="计费因子">
-                <n-input-number v-model:value="editForm.factor" :min="0" :step="0.1" style="width: 100%" placeholder="Factor" />
-              </n-form-item>
-            </div>
-          </n-form>
+          </template>
+          <div class="tab-content">
+            <n-form :model="editForm" label-placement="left" label-width="100">
+              <!-- 账户信息分组 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <span class="section-icon">👤</span>
+                  <h4>账户信息</h4>
+                </div>
+                <div class="form-row-2">
+                  <n-form-item label="显示别名">
+                    <n-input v-model:value="editForm.alias" placeholder="控制台展示名称" />
+                  </n-form-item>
+                  <n-form-item label="账户状态">
+                    <n-select
+                      v-model:value="editForm.status"
+                      :options="[
+                        { label: '不修改', value: null },
+                        { label: '启用', value: true },
+                        { label: '禁用', value: false }
+                      ]"
+                    />
+                  </n-form-item>
+                </div>
+                <div class="form-row-2">
+                  <n-form-item label="账户邮箱">
+                    <n-input v-model:value="editForm.email" placeholder="用于登录的邮箱地址" />
+                  </n-form-item>
+                  <n-form-item label="账单邮箱">
+                    <n-input v-model:value="editForm.billingEmail" placeholder="接收账单通知的邮箱" />
+                  </n-form-item>
+                </div>
+              </div>
+
+              <!-- 权限配置分组 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <span class="section-icon">🔐</span>
+                  <h4>权限配置</h4>
+                </div>
+                <div class="form-row-3">
+                  <n-form-item label="允许的分组">
+                    <n-input-number v-model:value="editForm.level" :min="0" style="width: 100%" placeholder="Level" />
+                  </n-form-item>
+                  <n-form-item label="角色权限">
+                    <n-input-number v-model:value="editForm.role" :min="0" style="width: 100%" placeholder="Role" />
+                  </n-form-item>
+                  <n-form-item label="档位配置">
+                    <n-input-number v-model:value="editForm.gear" :min="0" style="width: 100%" placeholder="Gear" />
+                  </n-form-item>
+                </div>
+                <div class="form-row-2">
+                  <n-form-item label="费率倍数">
+                    <n-input-number v-model:value="editForm.rates" :min="0" :step="0.1" style="width: 100%" placeholder="计费倍率" />
+                  </n-form-item>
+                  <n-form-item label="计费因子">
+                    <n-input-number v-model:value="editForm.factor" :min="0" :step="0.1" style="width: 100%" placeholder="Factor" />
+                  </n-form-item>
+                </div>
+              </div>
+            </n-form>
+          </div>
         </n-tab-pane>
 
         <!-- 额度限制 Tab -->
-        <n-tab-pane name="limits" tab="额度与限制">
-          <n-form :model="editForm" label-placement="left" label-width="120" style="padding: 16px 0">
-            <div class="form-grid-2">
-              <n-form-item label="每月限额">
-                <n-input-number v-model:value="editForm.hardLimit" :min="0" style="width: 100%" placeholder="月度最高花费 (USD)" />
-              </n-form-item>
-              <n-form-item label="每日限额">
-                <n-input-number v-model:value="editForm.dailyLimit" :min="0" style="width: 100%" placeholder="每日最高花费 (USD)" />
-              </n-form-item>
+        <n-tab-pane name="limits">
+          <template #tab>
+            <div class="tab-title">
+              <n-icon size="16"><CashOutline /></n-icon>
+              <span>额度限制</span>
             </div>
-            <div class="form-grid-2">
-              <n-form-item label="预警额度">
-                <n-input-number v-model:value="editForm.softLimit" :min="0" style="width: 100%" placeholder="预警额度 (USD)" />
-              </n-form-item>
-              <n-form-item label="自动充值额度">
-                <n-input-number v-model:value="editForm.autoQuota" :min="0" style="width: 100%" placeholder="USD" />
-              </n-form-item>
-            </div>
-            <div class="form-grid-2">
-              <n-form-item label="子账户数量">
-                <n-input-number v-model:value="editForm.childLimit" :min="0" style="width: 100%" placeholder="最多可创建" />
-              </n-form-item>
-            </div>
-          </n-form>
+          </template>
+          <div class="tab-content">
+            <n-form :model="editForm" label-placement="left" label-width="120">
+              <!-- 消费限额 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <span class="section-icon">💰</span>
+                  <h4>消费限额</h4>
+                </div>
+                <div class="form-row-2">
+                  <n-form-item label="每月限额">
+                    <n-input-number v-model:value="editForm.hardLimit" :min="0" style="width: 100%" placeholder="月度最高花费">
+                      <template #suffix>USD</template>
+                    </n-input-number>
+                  </n-form-item>
+                  <n-form-item label="每日限额">
+                    <n-input-number v-model:value="editForm.dailyLimit" :min="0" style="width: 100%" placeholder="每日最高花费">
+                      <template #suffix>USD</template>
+                    </n-input-number>
+                  </n-form-item>
+                </div>
+                <div class="form-row-2">
+                  <n-form-item label="预警额度">
+                    <n-input-number v-model:value="editForm.softLimit" :min="0" style="width: 100%" placeholder="预警额度">
+                      <template #suffix>USD</template>
+                    </n-input-number>
+                  </n-form-item>
+                  <n-form-item label="自动充值额度">
+                    <n-input-number v-model:value="editForm.autoQuota" :min="0" style="width: 100%" placeholder="自动充值额度">
+                      <template #suffix>USD</template>
+                    </n-input-number>
+                  </n-form-item>
+                </div>
+              </div>
+
+              <!-- 子账户配额 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <span class="section-icon">👥</span>
+                  <h4>子账户配额</h4>
+                </div>
+                <n-form-item label="子账户数量限制">
+                  <n-input-number v-model:value="editForm.childLimit" :min="0" style="width: 100%" placeholder="最多可创建的子账户数量">
+                    <template #suffix>个</template>
+                  </n-input-number>
+                </n-form-item>
+              </div>
+            </n-form>
+          </div>
         </n-tab-pane>
 
         <!-- 速率限制 Tab -->
-        <n-tab-pane name="rate" tab="速率控制">
-          <n-form :model="editForm" label-placement="left" label-width="100" style="padding: 16px 0">
-            <n-alert type="info" :bordered="false" style="margin-bottom: 20px">
-              设置用户的请求和Token使用速率限制，留空或0表示不限制
-            </n-alert>
-
-            <div class="rate-limit-group">
-              <div class="rate-limit-header">
-                <n-icon size="18" color="#18a058"><FlashOutline /></n-icon>
-                <span>请求速率限制</span>
-              </div>
-              <div class="rate-limit-inputs">
-                <n-form-item label="每分钟">
-                  <n-input-number v-model:value="editForm.rpm" :min="0" style="width: 100%" placeholder="RPM">
-                    <template #suffix>次</template>
-                  </n-input-number>
-                </n-form-item>
-                <n-form-item label="每小时">
-                  <n-input-number v-model:value="editForm.rph" :min="0" style="width: 100%" placeholder="RPH">
-                    <template #suffix>次</template>
-                  </n-input-number>
-                </n-form-item>
-                <n-form-item label="每天">
-                  <n-input-number v-model:value="editForm.rpd" :min="0" style="width: 100%" placeholder="RPD">
-                    <template #suffix>次</template>
-                  </n-input-number>
-                </n-form-item>
-              </div>
+        <n-tab-pane name="rate">
+          <template #tab>
+            <div class="tab-title">
+              <n-icon size="16"><FlashOutline /></n-icon>
+              <span>速率控制</span>
             </div>
-
-            <n-divider style="margin: 24px 0" />
-
-            <div class="rate-limit-group">
-              <div class="rate-limit-header">
-                <n-icon size="18" color="#2080f0"><PulseOutline /></n-icon>
-                <span>Token 速率限制</span>
+          </template>
+          <div class="tab-content">
+            <n-form :model="editForm" label-placement="left" label-width="100">
+              <!-- 全局请求速率 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <span class="section-icon">⚡</span>
+                  <h4>请求速率限制</h4>
+                </div>
+                <div class="form-row-3">
+                  <n-form-item label="每分钟请求数">
+                    <n-input-number v-model:value="editForm.rpm" :min="0" style="width: 100%" placeholder="RPM">
+                      <template #suffix>次</template>
+                    </n-input-number>
+                  </n-form-item>
+                  <n-form-item label="每小时请求数">
+                    <n-input-number v-model:value="editForm.rph" :min="0" style="width: 100%" placeholder="RPH">
+                      <template #suffix>次</template>
+                    </n-input-number>
+                  </n-form-item>
+                  <n-form-item label="每天请求数">
+                    <n-input-number v-model:value="editForm.rpd" :min="0" style="width: 100%" placeholder="RPD">
+                      <template #suffix>次</template>
+                    </n-input-number>
+                  </n-form-item>
+                </div>
               </div>
-              <div class="rate-limit-inputs">
-                <n-form-item label="每分钟">
-                  <n-input-number v-model:value="editForm.tpm" :min="0" style="width: 100%" placeholder="TPM">
-                    <template #suffix>tokens</template>
-                  </n-input-number>
-                </n-form-item>
-                <n-form-item label="每小时">
-                  <n-input-number v-model:value="editForm.tph" :min="0" style="width: 100%" placeholder="TPH">
-                    <template #suffix>tokens</template>
-                  </n-input-number>
-                </n-form-item>
-                <n-form-item label="每天">
-                  <n-input-number v-model:value="editForm.tpd" :min="0" style="width: 100%" placeholder="TPD">
-                    <template #suffix>tokens</template>
-                  </n-input-number>
-                </n-form-item>
+
+              <!-- Token 速率 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <span class="section-icon">🔷</span>
+                  <h4>Token 速率限制</h4>
+                </div>
+                <div class="form-row-3">
+                  <n-form-item label="每分钟 Token">
+                    <n-input-number v-model:value="editForm.tpm" :min="0" style="width: 100%" placeholder="TPM">
+                      <template #suffix>tokens</template>
+                    </n-input-number>
+                  </n-form-item>
+                  <n-form-item label="每小时 Token">
+                    <n-input-number v-model:value="editForm.tph" :min="0" style="width: 100%" placeholder="TPH">
+                      <template #suffix>tokens</template>
+                    </n-input-number>
+                  </n-form-item>
+                  <n-form-item label="每天 Token">
+                    <n-input-number v-model:value="editForm.tpd" :min="0" style="width: 100%" placeholder="TPD">
+                      <template #suffix>tokens</template>
+                    </n-input-number>
+                  </n-form-item>
+                </div>
               </div>
-            </div>
-          </n-form>
+
+              <!-- 单个模型速率 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <span class="section-icon">🎯</span>
+                  <h4>单个模型速率限制</h4>
+                </div>
+                <div class="model-limits-list">
+                  <div v-for="(item, index) in editForm.modelLimitsList" :key="index" class="model-limit-row">
+                    <div class="model-limit-field">
+                      <label>模型名称</label>
+                      <n-input
+                        v-model:value="item.model"
+                        placeholder="例如: gpt-4, claude-3-opus"
+                      />
+                    </div>
+                    <div class="model-limit-field">
+                      <label>每分钟请求</label>
+                      <n-input-number
+                        v-model:value="item.rpm"
+                        :min="0"
+                        placeholder="RPM"
+                        style="width: 100%"
+                      >
+                        <template #suffix>次/分</template>
+                      </n-input-number>
+                    </div>
+                    <div class="model-limit-field">
+                      <label>每分钟Token</label>
+                      <n-input-number
+                        v-model:value="item.tpm"
+                        :min="0"
+                        placeholder="TPM"
+                        style="width: 100%"
+                      >
+                        <template #suffix>tokens/分</template>
+                      </n-input-number>
+                    </div>
+                    <n-button text type="error" @click="removeModelLimit(index)" class="remove-btn">
+                      <template #icon><n-icon><TrashOutline /></n-icon></template>
+                    </n-button>
+                  </div>
+                  <n-button dashed block @click="addModelLimit">
+                    <template #icon><n-icon><AddOutline /></n-icon></template>
+                    添加模型限制
+                  </n-button>
+                </div>
+              </div>
+            </n-form>
+          </div>
         </n-tab-pane>
 
         <!-- 访问控制 Tab -->
-        <n-tab-pane name="access" tab="访问控制">
-          <n-form :model="editForm" label-placement="top" style="padding: 16px 0">
-            <n-alert type="warning" :bordered="false" style="margin-bottom: 20px">
-              通过白名单控制用户的访问权限，留空表示不限制
-            </n-alert>
-
-            <div class="access-control-grid">
-              <n-form-item label="IP 白名单">
-                <n-dynamic-tags v-model:value="editForm.allowIPsList" size="medium" />
-                <template #feedback>
-                  限制只允许这些IP地址访问
-                </template>
-              </n-form-item>
-
-              <n-form-item label="模型白名单">
-                <n-dynamic-tags v-model:value="editForm.allowModelsList" size="medium" />
-                <template #feedback>
-                  只允许使用这些模型，支持通配符如 gpt-4*
-                </template>
-              </n-form-item>
+        <n-tab-pane name="access">
+          <template #tab>
+            <div class="tab-title">
+              <n-icon size="16"><KeyOutline /></n-icon>
+              <span>访问控制</span>
             </div>
+          </template>
+          <div class="tab-content">
+            <n-form :model="editForm" label-placement="top">
+              <div class="access-control-section">
+                <n-alert type="info" :bordered="false" style="margin-bottom: 20px;">
+                  通过白名单控制用户的访问权限，留空表示不限制
+                </n-alert>
+                <div class="access-grid">
+                  <div class="access-card">
+                    <div class="access-card-header">
+                      <span class="access-icon">🌐</span>
+                      <h5>IP 白名单</h5>
+                    </div>
+                    <n-dynamic-tags v-model:value="editForm.allowIPsList" />
+                    <p class="access-hint">限制只允许这些IP地址访问</p>
+                  </div>
 
-            <div class="access-control-grid">
-              <n-form-item label="允许的分组">
-                <n-dynamic-tags v-model:value="editForm.allowLevelsList" size="medium" />
-                <template #feedback>
-                  限制只能访问这些分组的Provider
-                </template>
-              </n-form-item>
+                  <div class="access-card">
+                    <div class="access-card-header">
+                      <span class="access-icon">🤖</span>
+                      <h5>模型白名单</h5>
+                    </div>
+                    <n-dynamic-tags v-model:value="editForm.allowModelsList" />
+                    <p class="access-hint">只允许使用这些模型，支持通配符如 gpt-4*</p>
+                  </div>
 
-              <n-form-item label="API 路径白名单">
-                <n-dynamic-tags v-model:value="editForm.resourcesList" size="medium" />
-                <template #feedback>
-                  只允许访问这些API路径，如 /v1/chat/completions
-                </template>
-              </n-form-item>
-            </div>
-          </n-form>
+                  <div class="access-card">
+                    <div class="access-card-header">
+                      <span class="access-icon">📦</span>
+                      <h5>允许的分组</h5>
+                    </div>
+                    <n-dynamic-tags v-model:value="editForm.allowLevelsList" />
+                    <p class="access-hint">限制只能访问这些分组的Provider</p>
+                  </div>
+
+                  <div class="access-card">
+                    <div class="access-card-header">
+                      <span class="access-icon">🔌</span>
+                      <h5>API 路径白名单</h5>
+                    </div>
+                    <n-dynamic-tags v-model:value="editForm.resourcesList" />
+                    <p class="access-hint">只允许访问这些API路径，如 /v1/chat/completions</p>
+                  </div>
+                </div>
+              </div>
+            </n-form>
+          </div>
         </n-tab-pane>
 
         <!-- 高级配置 Tab -->
-        <n-tab-pane name="advanced" tab="高级配置">
-          <n-form :model="editForm" label-placement="top" style="padding: 16px 0">
-            <n-alert type="info" :bordered="false" style="margin-bottom: 20px">
-              高级配置项，如不了解请勿随意修改
-            </n-alert>
-
-            <n-form-item label="二维码数据">
-              <n-input v-model:value="editForm.qrcode" placeholder="可选，用于生成二维码" />
-            </n-form-item>
-
-            <n-divider style="margin: 28px 0 20px 0">
+        <n-tab-pane name="advanced">
+          <template #tab>
+            <div class="tab-title">
               <n-icon size="16"><SwapHorizontalOutline /></n-icon>
-              <span style="margin-left: 8px">模型映射配置</span>
-            </n-divider>
-            <div class="mapper-section">
-              <n-alert type="default" :bordered="false" style="margin-bottom: 16px">
-                将用户请求的模型名称映射到实际调用的模型，例如将 gpt-4 映射到 gpt-4-turbo
-              </n-alert>
-              <div v-for="(item, index) in editForm.modelMapperList" :key="index" class="mapper-item">
-                <div class="mapper-inputs">
-                  <n-input
-                    v-model:value="item.key"
-                    placeholder="用户请求的模型名"
-                    size="medium"
-                  />
-                  <div class="mapper-arrow">
-                    <n-icon size="20" color="#2080f0"><ArrowForwardOutline /></n-icon>
-                  </div>
-                  <n-input
-                    v-model:value="item.value"
-                    placeholder="实际调用的模型名"
-                    size="medium"
-                  />
-                </div>
-                <n-button quaternary circle type="error" @click="removeModelMapper(index)" class="mapper-delete">
-                  <template #icon><n-icon size="18"><TrashOutline /></n-icon></template>
-                </n-button>
-              </div>
-              <n-button dashed block @click="addModelMapper" size="medium">
-                <template #icon><n-icon><AddOutline /></n-icon></template>
-                添加模型映射
-              </n-button>
+              <span>高级配置</span>
             </div>
+          </template>
+          <div class="tab-content">
+            <n-form :model="editForm" label-placement="top">
+              <n-alert type="warning" :bordered="false" style="margin-bottom: 20px;">
+                高级配置项，如不了解请勿随意修改
+              </n-alert>
 
-            <n-divider style="margin: 28px 0 20px 0">
-              <n-icon size="16"><GitNetworkOutline /></n-icon>
-              <span style="margin-left: 8px">分组路由配置</span>
-            </n-divider>
-            <div class="mapper-section">
-              <n-alert type="default" :bordered="false" style="margin-bottom: 16px">
-                配置模型到分组的路由规则，例如将gpt-4模型路由到分组1，将claude-3模型路由到分组2
-              </n-alert>
-              <div v-for="(item, index) in editForm.levelMapperList" :key="index" class="mapper-item">
-                <div class="mapper-inputs">
-                  <n-input
-                    v-model:value="item.key"
-                    placeholder="模型名 (支持通配符*)"
-                    size="medium"
-                  />
-                  <div class="mapper-arrow">
-                    <n-icon size="20" color="#2080f0"><ArrowForwardOutline /></n-icon>
-                  </div>
-                  <n-input
-                    v-model:value="item.value"
-                    placeholder="分组号"
-                    size="medium"
-                  />
+              <div class="form-section">
+                <div class="section-header">
+                  <span class="section-icon">📱</span>
+                  <h4>其他配置</h4>
                 </div>
-                <n-button quaternary circle type="error" @click="removeLevelMapper(index)" class="mapper-delete">
-                  <template #icon><n-icon size="18"><TrashOutline /></n-icon></template>
-                </n-button>
+                <n-form-item label="二维码数据">
+                  <n-input v-model:value="editForm.qrcode" placeholder="可选，用于生成二维码" />
+                </n-form-item>
               </div>
-              <n-button dashed block @click="addLevelMapper" size="medium">
-                <template #icon><n-icon><AddOutline /></n-icon></template>
-                添加分组路由
-              </n-button>
-            </div>
-          </n-form>
+
+              <!-- 模型映射 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <span class="section-icon">🔄</span>
+                  <h4>模型映射配置</h4>
+                </div>
+                <p class="section-desc">将用户请求的模型名称映射到实际调用的模型，例如将 gpt-4 映射到 gpt-4-turbo</p>
+                <div class="mapper-list">
+                  <div v-for="(item, index) in editForm.modelMapperList" :key="index" class="mapper-row">
+                    <div class="mapper-field">
+                      <label>用户请求的模型名</label>
+                      <n-input
+                        v-model:value="item.key"
+                        placeholder="例如: gpt-4"
+                      />
+                    </div>
+                    <div class="mapper-arrow">
+                      <n-icon size="20" color="#2080f0"><ArrowForwardOutline /></n-icon>
+                    </div>
+                    <div class="mapper-field">
+                      <label>实际调用的模型名</label>
+                      <n-input
+                        v-model:value="item.value"
+                        placeholder="例如: gpt-4-turbo"
+                      />
+                    </div>
+                    <n-button text type="error" @click="removeModelMapper(index)" class="remove-btn">
+                      <template #icon><n-icon><TrashOutline /></n-icon></template>
+                    </n-button>
+                  </div>
+                  <n-button dashed block @click="addModelMapper">
+                    <template #icon><n-icon><AddOutline /></n-icon></template>
+                    添加模型映射
+                  </n-button>
+                </div>
+              </div>
+
+              <!-- 分组路由 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <span class="section-icon">🔀</span>
+                  <h4>分组路由配置</h4>
+                </div>
+                <p class="section-desc">配置模型到分组的路由规则，例如将gpt-4模型路由到分组1，将claude-3模型路由到分组2</p>
+                <div class="mapper-list">
+                  <div v-for="(item, index) in editForm.levelMapperList" :key="index" class="mapper-row">
+                    <div class="mapper-field">
+                      <label>模型名 (支持通配符*)</label>
+                      <n-input
+                        v-model:value="item.key"
+                        placeholder="例如: gpt-4* 或 claude-*"
+                      />
+                    </div>
+                    <div class="mapper-arrow">
+                      <n-icon size="20" color="#10b981"><ArrowForwardOutline /></n-icon>
+                    </div>
+                    <div class="mapper-field">
+                      <label>分组号</label>
+                      <n-input
+                        v-model:value="item.value"
+                        placeholder="例如: 1"
+                      />
+                    </div>
+                    <n-button text type="error" @click="removeLevelMapper(index)" class="remove-btn">
+                      <template #icon><n-icon><TrashOutline /></n-icon></template>
+                    </n-button>
+                  </div>
+                  <n-button dashed block @click="addLevelMapper">
+                    <template #icon><n-icon><AddOutline /></n-icon></template>
+                    添加分组路由
+                  </n-button>
+                </div>
+              </div>
+            </n-form>
+          </div>
         </n-tab-pane>
       </n-tabs>
 
@@ -453,6 +548,7 @@
         <div class="modal-footer">
           <n-button @click="editModalVisible = false">取消</n-button>
           <n-button type="primary" :loading="submitting" @click="handleUpdate">
+            <template #icon><n-icon><CreateOutline /></n-icon></template>
             保存修改
           </n-button>
         </div>
@@ -957,6 +1053,7 @@ import {
   NPopover,
   useMessage,
 } from 'naive-ui';
+import BackToTop from '@/components/common/BackToTop.vue';
 import {
   SearchOutline,
   AddOutline,
@@ -972,6 +1069,7 @@ import {
   ArrowForwardOutline,
   InformationCircleOutline,
   TimeOutline,
+  CubeOutline,
 } from '@vicons/ionicons5';
 import {
   createUser,
@@ -1052,6 +1150,7 @@ const editForm = ref({
   resourcesList: [],
   modelMapperList: [],
   levelMapperList: [],
+  modelLimitsList: [],  // 单个模型速率限制列表
   qrcode: '',
 });
 
@@ -1210,23 +1309,13 @@ const filteredAccounts = computed(() => {
 // 总数
 const totalCount = computed(() => allAccounts.value.length);
 
-// 前端分页配置
-const pagination = computed(() => ({
-  page: currentPage.value,
-  pageSize: pageSize.value,
-  itemCount: totalCount.value,
-  showSizePicker: true,
-  pageSizes: [10, 20, 50, 100],
-  showQuickJumper: true,
-  prefix: ({ itemCount }) => `共 ${itemCount} 条`,
-  onUpdatePage: (page) => {
-    currentPage.value = page;
-  },
-  onUpdatePageSize: (size) => {
-    pageSize.value = size;
-    currentPage.value = 1;
-  },
-}));
+// 监听分页变化，滚动到顶部
+watch([currentPage, pageSize], () => {
+  const tableWrapper = document.querySelector('.table-wrapper');
+  if (tableWrapper) {
+    tableWrapper.scrollTop = 0;
+  }
+});
 
 // 计算账户余额（累加CreditBalance数组的balance）
 function calculateBalance(account) {
@@ -1404,6 +1493,7 @@ const columns = [
             secondary: true,
             onClick: () => openDetailModal(row),
             title: '查看详情',
+            style: 'margin: 0;'
           },
           {
             icon: () => h(NIcon, null, { default: () => h(EyeOutline) }),
@@ -1417,6 +1507,7 @@ const columns = [
             ghost: true,
             onClick: () => openEditModal(row),
             title: '编辑配置',
+            style: 'margin: 0;'
           },
           {
             icon: () => h(NIcon, null, { default: () => h(CreateOutline) }),
@@ -1434,6 +1525,7 @@ const columns = [
               ghost: true,
               onClick: () => openPackageModal(row),
               title: '变更套餐到期时间',
+              style: 'margin: 0;'
             },
             {
               icon: () => h(NIcon, null, { default: () => h(TimeOutline) }),
@@ -1451,6 +1543,7 @@ const columns = [
             ghost: true,
             onClick: () => openCreditModal(row),
             title: '充值/扣款',
+            style: 'margin: 0;'
           },
           {
             icon: () => h(NIcon, null, { default: () => h(CashOutline) }),
@@ -1473,6 +1566,7 @@ const columns = [
                   type: 'error',
                   ghost: true,
                   title: '删除账户',
+                  style: 'margin: 0;'
                 },
                 {
                   icon: () => h(NIcon, null, { default: () => h(TrashOutline) }),
@@ -1483,7 +1577,7 @@ const columns = [
         )
       );
 
-      return h('div', { class: 'action-buttons' }, buttons);
+      return h('div', { class: 'action-buttons', style: 'display: flex; gap: 6px;' }, buttons);
     },
   },
 ];
@@ -1588,6 +1682,7 @@ function openEditModal(account) {
   // JSON对象转键值对数组
   const modelMapper = account.ModelMapper || account.model_mapper;
   const levelMapper = account.LevelMapper || account.level_mapper;
+  const modelLimits = account.ModelLimits || account.model_limits;
 
   // 辅助函数：确保字段是数组（处理API返回空对象{}的情况）
   const toArray = (value) => {
@@ -1597,6 +1692,16 @@ function openEditModal(account) {
     }
     return [];
   };
+
+  // 将 ModelLimits 对象转换为列表
+  // 格式: { "gpt-4": { "rpm": 30, "tpm": 90000 } } => [{ model: "gpt-4", rpm: 30, tpm: 90000 }]
+  const modelLimitsList = modelLimits && typeof modelLimits === 'object'
+    ? Object.entries(modelLimits).map(([model, limits]) => ({
+        model,
+        rpm: limits.rpm || limits.RPM || null,
+        tpm: limits.tpm || limits.TPM || null,
+      }))
+    : [];
 
   const formData = {
     alias: account.Alias || account.alias || '',
@@ -1625,6 +1730,7 @@ function openEditModal(account) {
     resourcesList: toArray(account.Resources || account.resources),
     modelMapperList: modelMapper ? Object.entries(modelMapper).map(([key, value]) => ({ key, value })) : [],
     levelMapperList: levelMapper ? Object.entries(levelMapper).map(([key, value]) => ({ key, value })) : [],
+    modelLimitsList: modelLimitsList,
     qrcode: account.QRCode || account.qrcode || account.qr_code || '',
   };
 
@@ -1646,6 +1752,14 @@ function removeModelMapper(index) {
 
 function addLevelMapper() {
   editForm.value.levelMapperList.push({ key: '', value: '' });
+}
+
+function addModelLimit() {
+  editForm.value.modelLimitsList.push({ model: '', rpm: null, tpm: null });
+}
+
+function removeModelLimit(index) {
+  editForm.value.modelLimitsList.splice(index, 1);
 }
 
 function removeLevelMapper(index) {
@@ -1935,6 +2049,29 @@ async function handleUpdate() {
     }
   }
 
+  // 单个模型速率限制 - 转为对象格式
+  // 格式: [{ model: "gpt-4", rpm: 30, tpm: 90000 }] => { "gpt-4": { "rpm": 30, "tpm": 90000 } }
+  if (!mapperListsEqual(editForm.value.modelLimitsList, initialEditForm.value.modelLimitsList) && editForm.value.modelLimitsList?.length) {
+    const modelLimitsObj = {};
+    editForm.value.modelLimitsList
+      .filter(item => item.model && item.model.trim())
+      .forEach(item => {
+        const limits = {};
+        if (item.rpm !== null && item.rpm !== undefined && item.rpm !== '') {
+          limits.rpm = Number(item.rpm);
+        }
+        if (item.tpm !== null && item.tpm !== undefined && item.tpm !== '') {
+          limits.tpm = Number(item.tpm);
+        }
+        if (Object.keys(limits).length > 0) {
+          modelLimitsObj[item.model.trim()] = limits;
+        }
+      });
+    if (Object.keys(modelLimitsObj).length > 0) {
+      payload.ModelLimits = modelLimitsObj;
+    }
+  }
+
   if (editForm.value.qrcode?.trim() && editForm.value.qrcode !== initialEditForm.value.qrcode) {
     payload.QRCode = editForm.value.qrcode.trim();
   }
@@ -2177,17 +2314,128 @@ function closeCreateResultModal() {
 
 <style scoped>
 .account-tools-view {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
-.header-card,
+.header-card {
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.header-card :deep(.n-card__content) {
+  padding: 16px 20px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+}
+
 .table-card {
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 2px 12px rgba(90, 86, 246, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  padding: 28px 32px;
+  flex: 1;
+  min-height: 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-card :deep(.n-card__content) {
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.table-content :deep(.n-data-table-thead) {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.table-content :deep(.n-data-table-th) {
+  background: #ffffff !important;
+}
+
+.table-card :deep(.n-data-table-th) {
+  background: #ffffff !important;
+  font-weight: 700;
+  color: #6b7280;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e5e7eb !important;
+  padding: 16px 12px !important;
+}
+
+.table-card :deep(.n-data-table-td) {
+  padding: 14px 12px !important;
+  border-bottom: 1px solid #f3f4f6 !important;
+}
+
+.table-card :deep(.n-data-table-tr) {
+  transition: all 0.2s ease;
+}
+
+.table-card :deep(.n-data-table-tr:hover) {
+  background: #f9fafb !important;
+  box-shadow: 0 2px 8px rgba(90, 86, 246, 0.08);
+}
+
+.table-card :deep(.n-data-table .n-data-table-tr--striped) {
+  background: rgba(249, 250, 251, 0.5) !important;
+}
+
+.table-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 2px solid #e5e7eb;
+  background: #f9fafb;
+  min-height: 64px;
+}
+
+.footer-total {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  line-height: 1.5;
 }
 
 .header-content {
@@ -2252,15 +2500,40 @@ function closeCreateResultModal() {
 
 .action-buttons {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   align-items: center;
   justify-content: flex-start;
   flex-wrap: nowrap;
 }
 
-.action-buttons .n-button {
+.action-buttons :deep(.n-button) {
   min-width: 32px;
-  padding: 0 8px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 12px;
+  height: 26px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin-right: 0 !important;
+}
+
+.action-buttons :deep(.n-button:not(:last-child)) {
+  margin-right: 8px;
+}
+
+.action-buttons :deep(.n-button:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.action-buttons :deep(.n-button:active) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.action-buttons :deep(.n-button .n-button__icon) {
+  font-size: 14px;
 }
 
 .modal-footer {
@@ -2695,112 +2968,367 @@ function closeCreateResultModal() {
   margin: 0;
 }
 
-.form-grid-2 {
+/* 编辑弹窗样式优化 - 美观版 */
+.edit-account-modal :deep(.n-card) {
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+.edit-account-modal :deep(.n-card__header) {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  background: linear-gradient(to bottom, #ffffff, #fafbfc);
+}
+
+.edit-account-modal :deep(.n-card__content) {
+  padding: 0;
+}
+
+.edit-account-modal :deep(.n-card__footer) {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(249, 250, 251, 0.6);
+}
+
+.modal-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-main-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: var(--daw-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.header-account-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.account-name {
+  font-weight: 600;
+  color: var(--daw-primary);
+}
+
+.account-email {
+  color: var(--daw-text-secondary);
+}
+
+.account-email::before {
+  content: "·";
+  margin: 0 8px;
+  color: var(--daw-text-secondary);
+}
+
+.edit-tabs :deep(.n-tabs-nav) {
+  padding: 12px 24px 0;
+  background: linear-gradient(to bottom, rgba(249, 250, 251, 0.3), rgba(255, 255, 255, 0));
+}
+
+.edit-tabs :deep(.n-tabs-tab) {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.tab-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.tab-content {
+  padding: 24px;
+  max-height: 580px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.tab-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tab-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 3px;
+}
+
+.tab-content::-webkit-scrollbar-thumb {
+  background: rgba(90, 86, 246, 0.25);
+  border-radius: 3px;
+}
+
+.tab-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(90, 86, 246, 0.4);
+}
+
+/* Form Section */
+.form-section {
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.section-header h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--daw-text-primary);
+  margin: 0;
+}
+
+.section-desc {
+  font-size: 0.875rem;
+  color: var(--daw-text-secondary);
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+/* Form Rows */
+.form-row-2,
+.form-row-3 {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.form-row-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.form-row-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.form-row-2:last-child,
+.form-row-3:last-child {
+  margin-bottom: 0;
+}
+
+/* Model Limits List */
+.model-limits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.model-limit-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(90, 86, 246, 0.03), rgba(147, 51, 234, 0.02));
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  transition: all 0.25s ease;
+}
+
+.model-limit-row:hover {
+  background: linear-gradient(135deg, rgba(90, 86, 246, 0.06), rgba(147, 51, 234, 0.04));
+  border-color: rgba(90, 86, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(90, 86, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+.model-limit-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.model-limit-field:first-child {
+  flex: 2;
+}
+
+.model-limit-field label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--daw-text-secondary);
+}
+
+/* Access Control Section */
+.access-control-section {
+  width: 100%;
+}
+
+.access-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
 
-.form-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+.access-card {
+  padding: 18px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.9));
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  transition: all 0.25s ease;
 }
 
-.mapper-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
+.access-card:hover {
+  background: #ffffff;
+  border-color: rgba(90, 86, 246, 0.3);
+  box-shadow: 0 6px 16px rgba(90, 86, 246, 0.08);
+  transform: translateY(-2px);
 }
 
-.mapper-section p {
-  margin: 0 0 8px 0;
-}
-
-/* 速率限制组样式 */
-.rate-limit-group {
-  margin-bottom: 24px;
-}
-
-.rate-limit-header {
+.access-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.access-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.access-card-header h5 {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--daw-text-primary);
+  margin: 0;
 }
 
-.rate-limit-inputs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+.access-hint {
+  font-size: 0.8rem;
+  color: var(--daw-text-secondary);
+  margin: 8px 0 0 0;
+  line-height: 1.4;
 }
 
-/* 访问控制网格样式 */
-.access-control-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-/* Mapper 样式优化 */
-.mapper-item {
+/* Mapper List */
+.mapper-list {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 12px;
-  margin-bottom: 12px;
-  padding: 12px;
-  background: rgba(240, 242, 255, 0.3);
-  border-radius: 8px;
-  transition: all 0.2s ease;
 }
 
-.mapper-item:hover {
-  background: rgba(240, 242, 255, 0.5);
-}
-
-.mapper-inputs {
+.mapper-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(249, 250, 251, 0.8), rgba(255, 255, 255, 0.9));
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  transition: all 0.25s ease;
+}
+
+.mapper-row:hover {
+  background: #ffffff;
+  border-color: rgba(90, 86, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(90, 86, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+.mapper-field {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mapper-field label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--daw-text-secondary);
 }
 
 .mapper-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  padding-bottom: 8px;
+  opacity: 0.6;
 }
 
-.mapper-delete {
-  flex-shrink: 0;
-  margin-top: 4px;
+/* Remove Button */
+.remove-btn {
+  align-self: center;
+  opacity: 0.6;
+  transition: opacity 0.2s;
 }
 
-.mapper-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.model-limit-row:hover .remove-btn,
+.mapper-row:hover .remove-btn {
+  opacity: 1;
 }
 
-.mapper-row .n-input {
-  flex: 1;
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .modal-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-account-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .account-email::before {
+    display: none;
+  }
+
+  .form-row-2,
+  .form-row-3,
+  .access-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .model-limit-row,
+  .mapper-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .model-limit-field:first-child {
+    flex: 1;
+  }
+
+  .mapper-arrow {
+    transform: rotate(90deg);
+    padding: 0;
+  }
+
+  .tab-content {
+    max-height: 520px;
+    padding: 16px;
+  }
 }
 
-.rate-limit-section {
-  margin-bottom: 24px;
-}
-
-.rate-limit-section h4 {
-  margin: 0 0 12px 0;
-  font-size: 0.95rem;
-  color: var(--daw-text-secondary);
-}
 
 .create-result-content {
   display: flex;
