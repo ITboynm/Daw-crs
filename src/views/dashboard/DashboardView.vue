@@ -17,186 +17,136 @@
         </div>
 
         <div class="hero-content">
-          <div class="hero-section unified-key-section">
-            <div class="section-header">
-              <span class="section-title">密钥速览</span>
-              <span v-if="loadingSelfUsage" class="usage-loading">
-                <n-spin size="small" />
-              </span>
-            </div>
-
-            <!-- API Key 显示 -->
-            <div class="api-key-card">
-              <div class="api-key-main">
-                <div class="api-key-info">
-                  <span class="api-key-label">API Key</span>
-                  <div class="key-value">{{ displayedApiKey }}</div>
-                </div>
-                <div class="api-key-quick-actions">
-                  <n-button text @click="toggleApiKey" :focusable="false">
+          <!-- 核心信息一览 -->
+          <div class="core-info-row">
+            <!-- API Key 精简展示 -->
+            <div class="api-key-mini">
+              <div class="api-key-mini-header">
+                <span class="api-key-mini-label">🔑 API Key</span>
+                <div class="api-key-mini-actions">
+                  <n-button 
+                    class="api-key-action-btn" 
+                    quaternary 
+                    size="small" 
+                    @click="toggleApiKey" 
+                    :focusable="false"
+                  >
                     <template #icon>
                       <n-icon :component="showApiKey ? EyeOffOutline : EyeOutline" />
                     </template>
+                    {{ showApiKey ? '隐藏' : '显示' }}
                   </n-button>
-                  <n-button text @click="copyApiKey" :disabled="!authStore.apiKey" :focusable="false">
+                  <n-button 
+                    class="api-key-action-btn" 
+                    quaternary 
+                    size="small" 
+                    @click="copyApiKey" 
+                    :disabled="!authStore.apiKey" 
+                    :focusable="false"
+                  >
                     <template #icon>
                       <n-icon :component="CopyOutline" />
+                    </template>
+                    复制
+                  </n-button>
+                  <n-button 
+                    class="api-key-action-btn" 
+                    quaternary 
+                    size="small" 
+                    @click="goTo('api-reference')" 
+                    :focusable="false"
+                  >
+                    <template #icon>
+                      <n-icon><ArrowForwardOutline /></n-icon>
+                    </template>
+                    示例
+                  </n-button>
+                </div>
+              </div>
+              <div class="api-key-mini-value">{{ displayedApiKey }}</div>
+            </div>
+
+            <!-- 每月限额进度 -->
+            <div v-if="selfUsage?.hard_limit !== undefined && selfUsage?.hard_limit > 0" class="limit-progress-card">
+              <div class="limit-card-header">
+                <span class="limit-card-title">💰 每月限额</span>
+                <span class="limit-card-percentage" :class="'status-' + monthlyLimitStatus">
+                  {{ monthlyLimitPercentage.toFixed(1) }}%
+                </span>
+              </div>
+              <div class="limit-progress-bar">
+                <div 
+                  class="limit-progress-fill"
+                  :class="'fill-' + monthlyLimitStatus"
+                  :style="{ width: monthlyLimitPercentage + '%' }"
+                ></div>
+              </div>
+              <div class="limit-card-info">
+                <span class="limit-info-used">{{ formatCurrency(selfUsage?.credit_used || 0, { scientific: true }) }}</span>
+                <span class="limit-info-divider">/</span>
+                <span class="limit-info-total">{{ formatCurrency(selfUsage?.hard_limit || 0, { scientific: true }) }}</span>
+              </div>
+            </div>
+
+            <!-- 每日限额进度 -->
+            <div v-if="selfUsage?.daily_limit !== undefined && selfUsage?.daily_limit > 0" class="limit-progress-card">
+              <div class="limit-card-header">
+                <span class="limit-card-title">📅 每日限额</span>
+                <div class="limit-card-actions">
+                  <span class="limit-card-percentage" :class="'status-' + dailyLimitStatus">
+                    {{ dailyLimitPercentage.toFixed(1) }}%
+                  </span>
+                  <n-button
+                    text
+                    size="tiny"
+                    @click="openEditDailyLimitModal"
+                    class="limit-edit-btn"
+                  >
+                    <template #icon>
+                      <n-icon size="14"><CreateOutline /></n-icon>
                     </template>
                   </n-button>
                 </div>
               </div>
-              <div class="api-key-footer">
-                <n-button text size="tiny" @click="goTo('api-reference')">
-                  查看调用示例
+              <div class="limit-progress-bar">
+                <div 
+                  class="limit-progress-fill"
+                  :class="'fill-' + dailyLimitStatus"
+                  :style="{ width: dailyLimitPercentage + '%' }"
+                ></div>
+              </div>
+              <div class="limit-card-info">
+                <span class="limit-info-used">{{ formatCurrency(usageSummary?.total_credit_used || 0, { scientific: true }) }}</span>
+                <span class="limit-info-divider">/</span>
+                <span class="limit-info-total">{{ formatCurrency(selfUsage?.daily_limit || 0, { scientific: true }) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 充值卡明细 -->
+          <div v-if="allCreditBalance.length > 0" class="credit-balance-section-compact">
+            <div class="credit-header-compact">
+              <span class="credit-title-compact">💳 充值卡明细</span>
+              <div class="credit-actions-compact">
+                <span class="credit-total-compact">
+                  余额: <strong>{{ formatCurrency(totalValidCredit, { scientific: true }) }}</strong>
+                </span>
+                <n-button
+                  v-if="allCreditBalance.length > 2"
+                  text
+                  size="tiny"
+                  @click="toggleCreditExpanded"
+                  class="toggle-credit-btn-compact"
+                >
+                  {{ isCreditExpanded ? '收起' : `展开 (${allCreditBalance.length})` }}
                   <template #icon>
-                    <n-icon><ArrowForwardOutline /></n-icon>
+                    <n-icon size="14">
+                      <component :is="isCreditExpanded ? ChevronUpOutline : ChevronDownOutline" />
+                    </n-icon>
                   </template>
                 </n-button>
               </div>
             </div>
-
-            <!-- 消费额度水球图 -->
-            <div class="limit-liquid-section">
-              <!-- 每月限额水球图 -->
-              <div v-if="selfUsage?.hard_limit !== undefined && selfUsage?.hard_limit > 0" class="liquid-ball-container">
-                <div class="liquid-ball-header">
-                  <span class="liquid-ball-label">每月消费额度</span>
-                </div>
-                <div class="liquid-ball-wrapper">
-                  <div class="liquid-ball-background" :class="'bg-' + monthlyLimitStatus"></div>
-                  <div class="liquid-ball" :class="'liquid-' + monthlyLimitStatus">
-                    <svg class="liquid-svg" viewBox="0 0 200 200">
-                    <defs>
-                      <linearGradient :id="'monthlyGradient'" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" :style="{ stopColor: getGradientColor(monthlyLimitStatus, 'start'), stopOpacity: 0.8 }" />
-                        <stop offset="100%" :style="{ stopColor: getGradientColor(monthlyLimitStatus, 'end'), stopOpacity: 0.9 }" />
-                      </linearGradient>
-                      <clipPath id="monthlyClip">
-                        <circle cx="100" cy="100" r="90" />
-                      </clipPath>
-                    </defs>
-                    
-                    <!-- 外圈 -->
-                    <circle cx="100" cy="100" r="90" fill="none" :stroke="getGradientColor(monthlyLimitStatus, 'border')" stroke-width="3" opacity="0.3" />
-                    
-                    <!-- 液体波浪 -->
-                    <g clip-path="url(#monthlyClip)">
-                      <path
-                        :d="generateWavePath(monthlyLimitPercentage, 0)"
-                        :fill="'url(#monthlyGradient)'"
-                        class="liquid-wave liquid-wave-1"
-                      />
-                      <path
-                        :d="generateWavePath(monthlyLimitPercentage, 50)"
-                        :fill="'url(#monthlyGradient)'"
-                        class="liquid-wave liquid-wave-2"
-                        opacity="0.6"
-                      />
-                    </g>
-                    
-                    <!-- 百分比文字 -->
-                    <text x="100" y="90" text-anchor="middle" class="liquid-percentage">
-                      {{ monthlyLimitPercentage.toFixed(1) }}%
-                    </text>
-                    <text x="100" y="118" text-anchor="middle" class="liquid-label-text">
-                      {{ formatCurrency(selfUsage?.credit_used || 0, { scientific: true }) }}
-                    </text>
-                    <text x="100" y="138" text-anchor="middle" class="liquid-label-sub">
-                      / {{ formatCurrency(selfUsage?.hard_limit || 0, { scientific: true }) }}
-                    </text>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 每日限额水球图 -->
-              <div v-if="selfUsage?.daily_limit !== undefined && selfUsage?.daily_limit > 0" class="liquid-ball-container">
-                <div class="liquid-ball-header">
-                  <span class="liquid-ball-label">每日消费额度</span>
-                  <n-button
-                    type="primary"
-                    size="small"
-                    @click="openEditDailyLimitModal"
-                    class="edit-limit-button-small"
-                  >
-                    <template #icon>
-                      <n-icon><CreateOutline /></n-icon>
-                    </template>
-                    调整
-                  </n-button>
-                </div>
-                <div class="liquid-ball-wrapper">
-                  <div class="liquid-ball-background" :class="'bg-' + dailyLimitStatus"></div>
-                  <div class="liquid-ball" :class="'liquid-' + dailyLimitStatus">
-                    <svg class="liquid-svg" viewBox="0 0 200 200">
-                    <defs>
-                      <linearGradient :id="'dailyGradient'" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" :style="{ stopColor: getGradientColor(dailyLimitStatus, 'start'), stopOpacity: 0.8 }" />
-                        <stop offset="100%" :style="{ stopColor: getGradientColor(dailyLimitStatus, 'end'), stopOpacity: 0.9 }" />
-                      </linearGradient>
-                      <clipPath id="dailyClip">
-                        <circle cx="100" cy="100" r="90" />
-                      </clipPath>
-                    </defs>
-                    
-                    <!-- 外圈 -->
-                    <circle cx="100" cy="100" r="90" fill="none" :stroke="getGradientColor(dailyLimitStatus, 'border')" stroke-width="3" opacity="0.3" />
-                    
-                    <!-- 液体波浪 -->
-                    <g clip-path="url(#dailyClip)">
-                      <path
-                        :d="generateWavePath(dailyLimitPercentage, 0)"
-                        :fill="'url(#dailyGradient)'"
-                        class="liquid-wave liquid-wave-1"
-                      />
-                      <path
-                        :d="generateWavePath(dailyLimitPercentage, 50)"
-                        :fill="'url(#dailyGradient)'"
-                        class="liquid-wave liquid-wave-2"
-                        opacity="0.6"
-                      />
-                    </g>
-                    
-                    <!-- 百分比文字 -->
-                    <text x="100" y="90" text-anchor="middle" class="liquid-percentage">
-                      {{ dailyLimitPercentage.toFixed(1) }}%
-                    </text>
-                    <text x="100" y="118" text-anchor="middle" class="liquid-label-text">
-                      {{ formatCurrency(usageSummary?.total_credit_used || 0, { scientific: true }) }}
-                    </text>
-                    <text x="100" y="138" text-anchor="middle" class="liquid-label-sub">
-                      / {{ formatCurrency(selfUsage?.daily_limit || 0, { scientific: true }) }}
-                    </text>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 充值卡明细 -->
-            <div v-if="allCreditBalance.length > 0" class="credit-balance-section">
-              <div class="section-header">
-                <span class="section-title">充值卡明细</span>
-                <div class="credit-header-right">
-                  <span class="credit-total">
-                    有效余额: <strong>{{ formatCurrency(totalValidCredit, { scientific: true }) }}</strong>
-                  </span>
-                  <n-button
-                    v-if="allCreditBalance.length > 3"
-                    text
-                    size="small"
-                    @click="toggleCreditExpanded"
-                    class="toggle-credit-btn"
-                  >
-                    {{ isCreditExpanded ? '收起' : `展开全部 (${allCreditBalance.length})` }}
-                    <template #icon>
-                      <n-icon>
-                        <component :is="isCreditExpanded ? ChevronUpOutline : ChevronDownOutline" />
-                      </n-icon>
-                    </template>
-                  </n-button>
-                </div>
-              </div>
               <div class="credit-balance-list">
                 <div 
                   v-for="(credit, idx) in displayedCreditBalance" 
@@ -252,7 +202,6 @@
                   </div>
                 </div>
               </div>
-            </div>
           </div>
         </div>
 
@@ -1170,10 +1119,10 @@ const totalValidCredit = computed(() => {
 
 // 显示的充值卡明细（根据展开状态）
 const displayedCreditBalance = computed(() => {
-  if (isCreditExpanded.value || allCreditBalance.value.length <= 3) {
+  if (isCreditExpanded.value || allCreditBalance.value.length <= 2) {
     return allCreditBalance.value;
   }
-  return allCreditBalance.value.slice(0, 3);
+  return allCreditBalance.value.slice(0, 2);
 });
 
 function loadDismissedNews() {
@@ -1498,7 +1447,7 @@ async function handleUpdateDailyLimit() {
 .dashboard-view {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
 }
 
 .dashboard-hero {
@@ -1507,62 +1456,68 @@ async function handleUpdateDailyLimit() {
 
 .hero-unified {
   width: 100%;
-  padding: 32px 36px;
-  border-radius: 26px;
+  padding: 24px 28px;
+  border-radius: 20px;
   background: var(--daw-surface);
   box-shadow: var(--daw-shadow-md);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
 }
 
 .hero-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid rgba(240, 242, 255, 0.8);
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(240, 242, 255, 0.8);
 }
 
 .hero-header-left {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 16px;
 }
 
 .hero-greeting {
   margin: 0;
   color: var(--daw-text-secondary);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .hero-title {
   margin: 0;
-  font-size: 1.8rem;
-  font-weight: 600;
+  font-size: 1.4rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .hero-balance {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, rgba(90, 86, 246, 0.08), rgba(139, 92, 246, 0.06));
+  border-radius: 14px;
+  border: 1px solid rgba(90, 86, 246, 0.15);
 }
 
 .hero-balance__label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--daw-text-secondary);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .hero-balance__value {
-  font-size: 2.1rem;
-  font-weight: 600;
+  font-size: 1.6rem;
+  font-weight: 700;
   background: linear-gradient(135deg, #5a56f6, #8b5cf6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1572,28 +1527,368 @@ async function handleUpdateDailyLimit() {
 .hero-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
-.unified-key-section {
+/* 核心信息一览 - 一行搞定 */
+.core-info-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+/* API Key 精简展示 */
+.api-key-mini {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px 24px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(247, 248, 253, 0.6), rgba(250, 250, 254, 0.4));
-  border: 1px solid rgba(226, 232, 240, 0.6);
-  min-height: 380px;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #ffffff 0%, #fafbff 100%);
+  border: 2px solid rgba(90, 86, 246, 0.2);
+  border-radius: 16px;
+  min-height: 0;
+  box-shadow: 0 4px 16px rgba(90, 86, 246, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.hero-section {
+.api-key-mini::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #5a56f6, #8b5cf6, #5a56f6);
+  background-size: 200% 100%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.api-key-mini:hover {
+  border-color: rgba(90, 86, 246, 0.4);
+  box-shadow: 0 8px 24px rgba(90, 86, 246, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.api-key-mini-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.api-key-mini-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--daw-text-primary);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.api-key-mini-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.api-key-action-btn {
+  padding: 4px 10px !important;
+  border-radius: 8px !important;
+  background: rgba(90, 86, 246, 0.08) !important;
+  border: 1px solid rgba(90, 86, 246, 0.15) !important;
+  transition: all 0.2s ease !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+}
+
+.api-key-action-btn:hover {
+  background: rgba(90, 86, 246, 0.15) !important;
+  border-color: rgba(90, 86, 246, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+.api-key-action-btn:active {
+  transform: translateY(0);
+}
+
+.api-key-mini:hover .api-key-action-btn {
+  background: rgba(90, 86, 246, 0.1) !important;
+}
+
+.api-key-mini-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: var(--daw-text-primary);
+  word-break: break-all;
+  line-height: 1.5;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* 限额进度卡片 */
+.limit-progress-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 20px 24px;
-  border-radius: 18px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 50%, #fafbff 100%);
+  border: 2px solid rgba(90, 86, 246, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(90, 86, 246, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.limit-progress-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    rgba(16, 185, 129, 0.6),
+    rgba(245, 158, 11, 0.6),
+    rgba(239, 68, 68, 0.6)
+  );
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+
+.limit-progress-card:hover::before {
+  opacity: 1;
+}
+
+.limit-progress-card:hover {
+  box-shadow: 0 8px 24px rgba(90, 86, 246, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  border-color: rgba(90, 86, 246, 0.3);
+}
+
+.limit-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.limit-card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--daw-text-primary);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.limit-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.limit-card-percentage {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 1.2rem;
+  font-weight: 800;
+  transition: color 0.3s;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.limit-card-percentage.status-success {
+  color: #10b981;
+}
+
+.limit-card-percentage.status-warning {
+  color: #f59e0b;
+}
+
+.limit-card-percentage.status-error {
+  color: #ef4444;
+}
+
+.limit-card-percentage.status-default {
+  color: #5a56f6;
+}
+
+.limit-edit-btn {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.limit-progress-card:hover .limit-edit-btn {
+  opacity: 1;
+}
+
+/* 进度条 */
+.limit-progress-bar {
+  position: relative;
+  height: 14px;
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.3), rgba(226, 232, 240, 0.5));
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.limit-progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.limit-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.fill-success {
+  background: linear-gradient(90deg, #10b981, #34d399, #10b981);
+  background-size: 200% 100%;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  animation: progress-glow 2s ease-in-out infinite;
+}
+
+.fill-warning {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+  background-size: 200% 100%;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  animation: progress-glow 2s ease-in-out infinite;
+}
+
+.fill-error {
+  background: linear-gradient(90deg, #ef4444, #f87171, #ef4444);
+  background-size: 200% 100%;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  animation: progress-glow 2s ease-in-out infinite;
+}
+
+.fill-default {
+  background: linear-gradient(90deg, #5a56f6, #8b5cf6, #5a56f6);
+  background-size: 200% 100%;
+  box-shadow: 0 0 16px rgba(90, 86, 246, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  animation: progress-glow 2s ease-in-out infinite;
+}
+
+@keyframes progress-glow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* 限额信息 */
+.limit-card-info {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.85rem;
+}
+
+.limit-info-used {
+  font-weight: 700;
+  color: var(--daw-primary);
+}
+
+.limit-info-divider {
+  color: var(--daw-text-secondary);
+  font-weight: 400;
+}
+
+.limit-info-total {
+  color: var(--daw-text-secondary);
+  font-weight: 500;
+}
+
+/* 充值卡紧凑展示 */
+.credit-balance-section-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
   background: linear-gradient(135deg, rgba(247, 248, 253, 0.6), rgba(250, 250, 254, 0.4));
   border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+}
+
+.credit-header-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.credit-title-compact {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--daw-text-primary);
+}
+
+.credit-actions-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.credit-total-compact {
+  font-size: 0.75rem;
+  color: var(--daw-text-secondary);
+}
+
+.credit-total-compact strong {
+  color: var(--daw-primary);
+  font-weight: 700;
+}
+
+.toggle-credit-btn-compact {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(90, 86, 246, 0.08);
+  color: var(--daw-primary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(90, 86, 246, 0.15);
+}
+
+.toggle-credit-btn-compact:hover {
+  background: rgba(90, 86, 246, 0.12);
+  border-color: rgba(90, 86, 246, 0.25);
 }
 
 .section-header {
@@ -1623,53 +1918,6 @@ async function handleUpdateDailyLimit() {
   color: var(--daw-text-secondary);
 }
 
-/* API Key Card */
-.api-key-card {
-  display: flex;
-  flex-direction: column;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.api-key-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  gap: 16px;
-}
-
-.api-key-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.api-key-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--daw-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.api-key-quick-actions {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.api-key-footer {
-  padding: 10px 16px;
-  border-top: 1px solid rgba(226, 232, 240, 0.6);
-  background: rgba(247, 248, 253, 0.5);
-  display: flex;
-  justify-content: flex-end;
-}
 
 /* Usage Stats */
 .usage-stats {
@@ -1713,62 +1961,6 @@ async function handleUpdateDailyLimit() {
   padding: 20px 0;
 }
 
-/* Liquid Ball Section */
-.limit-liquid-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 20px;
-  padding-top: 16px;
-  margin-top: 4px;
-  border-top: 1px solid rgba(226, 232, 240, 0.6);
-}
-
-.liquid-ball-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(247, 248, 253, 0.95));
-  border-radius: 20px;
-  box-shadow: 0 4px 16px rgba(90, 86, 246, 0.08);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  transition: all 0.3s ease;
-}
-
-.liquid-ball-container:hover {
-  box-shadow: 0 6px 24px rgba(90, 86, 246, 0.15);
-  transform: translateY(-2px);
-}
-
-.liquid-ball-header {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
-
-.liquid-ball-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--daw-text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.edit-limit-button-small {
-  flex-shrink: 0;
-}
-
-.liquid-ball-wrapper {
-  position: relative;
-  width: 180px;
-  height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 .liquid-ball-background {
   position: absolute;
@@ -1802,8 +1994,8 @@ async function handleUpdateDailyLimit() {
 }
 
 .liquid-ball {
-  width: 170px;
-  height: 170px;
+  width: 130px;
+  height: 130px;
   position: relative;
   z-index: 1;
 }
@@ -1811,16 +2003,16 @@ async function handleUpdateDailyLimit() {
 .liquid-svg {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 4px 12px rgba(90, 86, 246, 0.15));
+  filter: drop-shadow(0 3px 10px rgba(90, 86, 246, 0.15));
 }
 
 /* 波浪动画 */
 .liquid-wave-1 {
-  animation: wave-1 3s ease-in-out infinite;
+  animation: wave-1 2.8s ease-in-out infinite;
 }
 
 .liquid-wave-2 {
-  animation: wave-2 3.5s ease-in-out infinite;
+  animation: wave-2 3.2s ease-in-out infinite;
 }
 
 @keyframes wave-1 {
@@ -1828,7 +2020,7 @@ async function handleUpdateDailyLimit() {
     transform: translateX(0);
   }
   50% {
-    transform: translateX(-10px);
+    transform: translateX(-8px);
   }
 }
 
@@ -1837,14 +2029,14 @@ async function handleUpdateDailyLimit() {
     transform: translateX(0);
   }
   50% {
-    transform: translateX(10px);
+    transform: translateX(8px);
   }
 }
 
 /* 文字样式 */
 .liquid-percentage {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 40px;
+  font-size: 36px;
   font-weight: 700;
   fill: #1e293b;
   filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.8));
@@ -1852,7 +2044,7 @@ async function handleUpdateDailyLimit() {
 
 .liquid-label-text {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   fill: #334155;
   filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.8));
@@ -1860,7 +2052,7 @@ async function handleUpdateDailyLimit() {
 
 .liquid-label-sub {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   fill: #64748b;
   filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.8));
@@ -1883,75 +2075,29 @@ async function handleUpdateDailyLimit() {
   filter: drop-shadow(0 4px 16px rgba(90, 86, 246, 0.3));
 }
 
-/* Credit Balance Section */
-.credit-balance-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 16px;
-  margin-top: 4px;
-  border-top: 1px solid rgba(226, 232, 240, 0.6);
-}
-
-.credit-header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.credit-total {
-  font-size: 0.85rem;
-  color: var(--daw-text-secondary);
-}
-
-.credit-total strong {
-  color: var(--daw-primary);
-  font-weight: 700;
-}
-
-.toggle-credit-btn {
-  padding: 4px 12px;
-  border-radius: 8px;
-  background: rgba(90, 86, 246, 0.08);
-  color: var(--daw-primary);
-  font-size: 0.8rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  border: 1px solid rgba(90, 86, 246, 0.15);
-}
-
-.toggle-credit-btn:hover {
-  background: rgba(90, 86, 246, 0.12);
-  border-color: rgba(90, 86, 246, 0.25);
-  transform: translateY(-1px);
-}
-
-.toggle-credit-btn:active {
-  transform: translateY(0);
-}
 
 .credit-balance-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .credit-balance-item {
   display: flex;
   flex-direction: column;
-  padding: 16px 18px;
+  padding: 12px 14px;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 12px;
-  gap: 12px;
-  transition: all 0.3s ease;
+  border-radius: 10px;
+  gap: 10px;
+  transition: all 0.25s ease;
 }
 
 .credit-balance-item:hover {
   background: rgba(255, 255, 255, 1);
-  box-shadow: 0 4px 12px rgba(90, 86, 246, 0.12);
+  box-shadow: 0 3px 10px rgba(90, 86, 246, 0.12);
   border-color: rgba(90, 86, 246, 0.3);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 /* 使用中的卡片样式 */
@@ -2219,18 +2365,18 @@ async function handleUpdateDailyLimit() {
 .hero-footer {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  padding-top: 16px;
-  border-top: 2px solid rgba(240, 242, 255, 0.8);
-  font-size: 0.82rem;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(240, 242, 255, 0.8);
+  font-size: 0.78rem;
   color: var(--daw-text-secondary);
 }
 
 .refresh-button {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .refresh-button:hover {
@@ -2243,24 +2389,24 @@ async function handleUpdateDailyLimit() {
 }
 
 .refresh-icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   color: var(--daw-primary);
 }
 
 .summary-section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .summary-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  padding: 20px 24px;
-  border-radius: 24px;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 18px;
   background: var(--daw-surface);
   box-shadow: var(--daw-shadow-md);
   flex-wrap: wrap;
@@ -2775,11 +2921,52 @@ async function handleUpdateDailyLimit() {
   }
 }
 
+@media (max-width: 1024px) {
+  .core-info-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .liquid-ball-wrapper-mini {
+    width: 120px;
+    height: 120px;
+  }
+
+  .liquid-ball {
+    width: 110px;
+    height: 110px;
+  }
+
+  .liquid-percentage-mini {
+    font-size: 30px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .hero-greeting {
+    font-size: 0.7rem;
+  }
+
+  .hero-title {
+    font-size: 1.2rem;
+  }
+
+  .core-info-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 640px) {
   .summary-controls {
     flex-direction: column;
     align-items: stretch;
-    min-height: auto; /* 移动端取消固定高度 */
+    min-height: auto;
     padding: 16px;
   }
 
@@ -2808,6 +2995,16 @@ async function handleUpdateDailyLimit() {
   .table-head span:nth-child(n + 4),
   .table-row span:nth-child(n + 4) {
     display: none;
+  }
+
+  .hero-balance {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .hero-balance__value {
+    font-size: 1.3rem;
   }
 }
 </style>
