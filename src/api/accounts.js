@@ -43,3 +43,7 @@ export function resetUserKey(apiKey, confirmParam) {
     }
   });
 }
+
+export function getBillAnalytics(params = {}) {
+  return http.get('/x-bill', { params });
+}

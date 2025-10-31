@@ -50,6 +50,12 @@ const routes = [
         meta: { title: 'API Key 速查', requiresManage: true },
       },
       {
+        path: 'accounts/analytics',
+        name: 'sub-account-analytics',
+        component: () => import('@/views/accounts/SubAccountAnalyticsView.vue'),
+        meta: { title: '子账户数据分析', requiresManage: true },
+      },
+      {
         path: 'logs',
         name: 'logs',
         component: () => import('@/views/logs/LogsView.vue'),

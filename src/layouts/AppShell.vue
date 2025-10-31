@@ -98,6 +98,14 @@ const navItems = computed(() => {
       requiresManage: true,
     },
     {
+      key: 'sub-account-analytics',
+      label: '子账户数据分析',
+      icon: AnalyticsOutline,
+      to: { name: 'sub-account-analytics' },
+      group: '工具',
+      requiresManage: true,
+    },
+    {
       key: 'account-tools',
       label: '子账户工具',
       icon: PeopleOutline,
