@@ -994,13 +994,12 @@ const isRoot = computed(() => authStore.isRoot);
 const parentLimits = ref(null);
 
 // 数据状态
-const allAccounts = ref([]); // 当前页的数据
+const allAccountsData = ref([]); // 所有账户数据
 const loading = ref(false);
 const submitting = ref(false);
 const searchName = ref('');
 const searchEmail = ref('');
 const searchId = ref('');
-const totalCount = ref(0);
 
 // 筛选条件
 const filterForm = ref({
@@ -1154,28 +1153,80 @@ const generatedXCredit = computed(() => {
 
 const canSubmitXCredit = computed(() => Boolean(generatedXCredit.value));
 
-// 后端分页配置
+const currentPage = ref(1);
+const pageSize = ref(20);
+
+// 前端筛选后的账户列表
+const allAccounts = computed(() => {
+  let result = [...allAccountsData.value];
+  
+  // 按 level 筛选
+  if (filterForm.value.level !== null && filterForm.value.level !== undefined && filterForm.value.level !== '') {
+    result = result.filter(account => {
+      const level = account.Level || account.level;
+      return level === filterForm.value.level;
+    });
+  }
+  
+  // 按用户名搜索
+  if (searchName.value?.trim()) {
+    const term = searchName.value.trim().toLowerCase();
+    result = result.filter(account => {
+      const name = account.Name || account.name || '';
+      return name.toLowerCase().includes(term);
+    });
+  }
+  
+  // 按邮箱搜索
+  if (searchEmail.value?.trim()) {
+    const term = searchEmail.value.trim().toLowerCase();
+    result = result.filter(account => {
+      const email = account.Email || account.email || '';
+      return email.toLowerCase().includes(term);
+    });
+  }
+  
+  // 按 ID 搜索
+  if (searchId.value?.trim()) {
+    const id = parseInt(searchId.value.trim(), 10);
+    if (!isNaN(id)) {
+      result = result.filter(account => {
+        const accountId = account.ID || account.id;
+        return accountId === id;
+      });
+    }
+  }
+  
+  return result;
+});
+
+// 当前页显示的账户
+const filteredAccounts = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+  return allAccounts.value.slice(start, end);
+});
+
+// 总数
+const totalCount = computed(() => allAccounts.value.length);
+
+// 前端分页配置
 const pagination = computed(() => ({
   page: currentPage.value,
   pageSize: pageSize.value,
-  itemCount: totalCount.value, // 使用后端返回的总数
+  itemCount: totalCount.value,
   showSizePicker: true,
   pageSizes: [10, 20, 50, 100],
   showQuickJumper: true,
   prefix: ({ itemCount }) => `共 ${itemCount} 条`,
   onUpdatePage: (page) => {
     currentPage.value = page;
-    refreshList(); // 后端分页,需要重新加载数据
   },
   onUpdatePageSize: (size) => {
     pageSize.value = size;
     currentPage.value = 1;
-    refreshList(); // 后端分页,需要重新加载数据
   },
 }));
-
-const currentPage = ref(1);
-const pageSize = ref(20);
 
 // 计算账户余额（累加CreditBalance数组的balance）
 function calculateBalance(account) {
@@ -1437,11 +1488,6 @@ const columns = [
   },
 ];
 
-// 表格数据 - 直接使用后端返回的当前页数据
-const filteredAccounts = computed(() => {
-  return allAccounts.value;
-});
-
 // 生命周期
 onMounted(() => {
   refreshList();
@@ -1465,90 +1511,62 @@ async function fetchParentLimits() {
 }
 
 // 刷新列表 - 使用后端分页
+// 前端分页：一次性获取所有数据
 async function refreshList() {
   loading.value = true;
   try {
     const params = {
-      page: currentPage.value,
-      size: pageSize.value,
+      page: 1,
+      size: 9999, // 获取大量数据
     };
 
-    // 如果有 level 筛选
-    if (filterForm.value.level !== null && filterForm.value.level !== undefined && filterForm.value.level !== '') {
-      params.level = filterForm.value.level;
-    }
-
-    // 添加搜索参数
-    if (searchName.value?.trim()) {
-      params.name = searchName.value.trim();
-    }
-    if (searchEmail.value?.trim()) {
-      params.email = searchEmail.value.trim();
-    }
-    if (searchId.value?.trim()) {
-      const id = parseInt(searchId.value.trim(), 10);
-      if (!isNaN(id)) {
-        params.id = id;
-      }
-    }
-
     // 支持特殊路径过滤器
-    let endpoint = '/x-dna';
     if (filterForm.value.identifier && filterForm.value.identifier.trim()) {
       const identifier = filterForm.value.identifier.trim();
       // 使用路径参数方式调用，支持 L{n}, G{n}, R{n}, T{n}, F{n}, .{dna} 等特殊过滤器
-      const response = await getDescendant(identifier);
+      const response = await getDescendant(identifier, params);
       // 如果使用了特殊路径过滤器，返回的可能是单个用户或用户列表
       if (response.data.users) {
-        allAccounts.value = response.data.users || [];
-        // 从响应头获取总数
-        const headers = response.headers || {};
-        const headerTotal = headers['x-total-count'] || headers['X-Total-Count'];
-        totalCount.value = headerTotal ? parseInt(headerTotal, 10) : (response.data.total || allAccounts.value.length);
+        allAccountsData.value = response.data.users || [];
       } else if (Array.isArray(response.data)) {
-        allAccounts.value = response.data;
-        const headers = response.headers || {};
-        const headerTotal = headers['x-total-count'] || headers['X-Total-Count'];
-        totalCount.value = headerTotal ? parseInt(headerTotal, 10) : response.data.length;
+        allAccountsData.value = response.data;
       } else {
         // 单个用户
-        allAccounts.value = [response.data];
-        totalCount.value = 1;
+        allAccountsData.value = [response.data];
       }
     } else {
       // 普通列表查询
       const response = await getDescendants(params);
-      allAccounts.value = response.data.users || response.data || [];
-
-      // 从响应头获取总数
-      const headers = response.headers || {};
-      const headerTotal = headers['x-total-count'] || headers['X-Total-Count'];
-      totalCount.value = headerTotal ? parseInt(headerTotal, 10) : (response.data.total || allAccounts.value.length);
+      allAccountsData.value = response.data.users || response.data || [];
     }
   } catch (error) {
     const errorMessage = error?.response?.data?.message || error?.message || '获取子账户列表失败';
     message.error(errorMessage);
-    allAccounts.value = [];
-    totalCount.value = 0;
+    allAccountsData.value = [];
   } finally {
     loading.value = false;
   }
 }
 
-// 重置筛选条件
+// 重置筛选条件（前端分页，不需要重新加载数据）
 function resetFilters() {
   filterForm.value = {
     level: null,
     identifier: '',
   };
+  searchName.value = '';
+  searchEmail.value = '';
+  searchId.value = '';
   currentPage.value = 1;
-  refreshList();
 }
 
-// 应用筛选条件
+// 应用筛选条件（前端分页，identifier变化需要重新加载）
 function applyFilters() {
   currentPage.value = 1;
-  refreshList();
+  // 如果使用了特殊过滤器，需要重新加载
+  if (filterForm.value.identifier && filterForm.value.identifier.trim()) {
+    refreshList();
+  }
 }
 
 // 打开创建模态框

@@ -6,7 +6,9 @@
         <p class="subtitle">选择适合您的套餐方案，灵活满足不同需求</p>
       </header>
 
-      <div class="pricing-grid">
+      <n-tabs v-model:value="activeTab" type="line" size="large" justify-content="center" class="pricing-tabs">
+        <n-tab-pane name="claudecode" tab="Claude Code 套餐">
+          <div class="pricing-grid">
         <!-- 基础套餐 -->
         <div class="pricing-item">
           <div class="pricing-badge">基础版</div>
@@ -37,7 +39,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>支持 Claude Code 和 Codex</span>
+                <span>仅支持 <strong>Claude Code</strong></span>
               </div>
               <div class="feature-item">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -95,7 +97,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>支持 Claude Code 和 Codex</span>
+                <span>仅支持 <strong>Claude Code</strong></span>
               </div>
               <div class="feature-item">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -159,7 +161,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>支持 Claude Code 和 Codex</span>
+                <span>仅支持 <strong>Claude Code</strong></span>
               </div>
               <div class="feature-item">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -229,7 +231,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>支持 Claude Code 和 Codex</span>
+                <span>仅支持 <strong>Claude Code</strong></span>
               </div>
               <div class="feature-item">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -305,7 +307,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>支持 Claude Code 和 Codex</span>
+                <span>仅支持 <strong>Claude Code</strong></span>
               </div>
               <div class="feature-item">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -398,7 +400,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>支持 Claude Code 和 Codex</span>
+                <span>仅支持 <strong>Claude Code</strong></span>
               </div>
               <div class="feature-item">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -478,7 +480,199 @@
             </n-button>
           </div>
         </div>
-      </div>
+          </div>
+        </n-tab-pane>
+
+        <n-tab-pane name="codex" tab="Codex 套餐">
+          <div class="pricing-grid single-plan">
+            <!-- Codex 月卡套餐 -->
+            <div class="pricing-item featured">
+              <div class="pricing-badge popular">限时优惠</div>
+              <div class="pricing-content">
+                <div class="pricing-title">
+                  <h3>Codex 月卡</h3>
+                  <p class="pricing-desc">专注 gpt-5-codex 模型的专业套餐</p>
+                </div>
+                <div class="pricing-price">
+                  <span class="currency">¥</span>
+                  <span class="amount">150</span>
+                  <span class="period">/月</span>
+                </div>
+                <div class="pricing-features">
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>每日额度：<strong>100 美元</strong></span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>月度总额度：<strong>~3,000 美元</strong></span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>仅支持 <strong>gpt-5-codex</strong> 模型</span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>API 密钥管理</span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>优先技术支持</span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>使用数据统计</span>
+                  </div>
+                  <div class="feature-item warning">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span><strong>⚠️ 禁止分发</strong></span>
+                  </div>
+                </div>
+                <n-button type="primary" size="large" block class="subscribe-btn featured-btn">
+                  选择套餐
+                </n-button>
+              </div>
+            </div>
+          </div>
+        </n-tab-pane>
+
+        <n-tab-pane name="payasyougo" tab="按量套餐">
+          <div class="pricing-grid payg-grid">
+            <!-- Claude Code 按量 -->
+            <div class="pricing-item">
+              <div class="pricing-badge">按需付费</div>
+              <div class="pricing-content">
+                <div class="pricing-title">
+                  <h3>Claude Code 按量</h3>
+                  <p class="pricing-desc">Claude Code 模型，灵活按需付费</p>
+                </div>
+                <div class="pricing-price">
+                  <span class="payg-label">100 美元</span>
+                  <span class="payg-price">
+                    <span class="currency">¥</span>
+                    <span class="amount">100</span>
+                  </span>
+                </div>
+                <div class="pricing-features">
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>购买额度：<strong>100 美元</strong></span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>仅需：<strong>¥100</strong></span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span><strong>1元1刀</strong> 超值汇率</span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>支持 <strong>Claude Code</strong></span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>按实际使用计费</span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>无有效期限制</span>
+                  </div>
+                  <div class="feature-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>API 密钥管理</span>
+                  </div>
+                </div>
+                <n-button type="primary" size="large" block class="subscribe-btn">
+                  立即购买
+                </n-button>
+              </div>
+            </div>
+
+            <!-- Codex 按量（已售完） -->
+            <div class="pricing-item sold-out">
+              <div class="pricing-badge sold-out-badge">已售完</div>
+              <div class="pricing-content">
+                <div class="pricing-title">
+                  <h3>Codex 按量</h3>
+                  <p class="pricing-desc">gpt-5-codex 模型，暂时缺货</p>
+                </div>
+                <div class="pricing-price disabled">
+                  <span class="payg-label">100 美元</span>
+                  <span class="payg-price">
+                    <span class="currency">¥</span>
+                    <span class="amount">--</span>
+                  </span>
+                </div>
+                <div class="pricing-features">
+                  <div class="feature-item disabled">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6 18L18 6M6 6L18 18" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>暂时缺货</span>
+                  </div>
+                  <div class="feature-item disabled">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6 18L18 6M6 6L18 18" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>仅支持 gpt-5-codex 模型</span>
+                  </div>
+                  <div class="feature-item disabled">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6 18L18 6M6 6L18 18" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>按实际使用计费</span>
+                  </div>
+                  <div class="feature-item disabled">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6 18L18 6M6 6L18 18" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>无有效期限制</span>
+                  </div>
+                  <div class="feature-item disabled">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6 18L18 6M6 6L18 18" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>API 密钥管理</span>
+                  </div>
+                </div>
+                <n-button disabled size="large" block class="subscribe-btn">
+                  暂时缺货
+                </n-button>
+              </div>
+            </div>
+          </div>
+        </n-tab-pane>
+      </n-tabs>
 
       <div class="pricing-footer">
         <n-alert type="info" :bordered="false">
@@ -525,7 +719,10 @@
 </template>
 
 <script setup>
-import { NCard, NButton, NAlert } from 'naive-ui';
+import { ref } from 'vue';
+import { NCard, NButton, NAlert, NTabs, NTabPane } from 'naive-ui';
+
+const activeTab = ref('claudecode');
 </script>
 
 <style scoped>
@@ -538,7 +735,21 @@ import { NCard, NButton, NAlert } from 'naive-ui';
 
 .pricing-header {
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 32px;
+}
+
+.pricing-tabs {
+  margin-bottom: 36px;
+}
+
+.pricing-tabs :deep(.n-tabs-tab) {
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 12px 28px;
+}
+
+.pricing-tabs :deep(.n-tabs-bar) {
+  border-color: rgba(93, 95, 246, 0.2);
 }
 
 .pricing-header h1 {
@@ -566,6 +777,16 @@ import { NCard, NButton, NAlert } from 'naive-ui';
   max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.pricing-grid.single-plan {
+  grid-template-columns: 1fr;
+  max-width: 420px;
+}
+
+.pricing-grid.payg-grid {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  max-width: 800px;
 }
 
 .pricing-item {
@@ -623,6 +844,18 @@ import { NCard, NButton, NAlert } from 'naive-ui';
   transform: translateY(-12px);
 }
 
+.pricing-item.sold-out {
+  opacity: 0.6;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-color: #cbd5e1;
+  pointer-events: none;
+}
+
+.pricing-item.sold-out:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 .pricing-badge {
   position: absolute;
   top: 20px;
@@ -664,6 +897,12 @@ import { NCard, NButton, NAlert } from 'naive-ui';
   font-weight: 700;
 }
 
+.pricing-badge.sold-out-badge {
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
+}
+
 .pricing-content {
   padding: 32px;
 }
@@ -688,6 +927,27 @@ import { NCard, NButton, NAlert } from 'naive-ui';
   padding: 24px 0;
   border-top: 2px solid rgba(93, 95, 246, 0.1);
   border-bottom: 2px solid rgba(93, 95, 246, 0.1);
+}
+
+.pricing-price.disabled {
+  opacity: 0.5;
+  border-top: 2px solid rgba(148, 163, 184, 0.2);
+  border-bottom: 2px solid rgba(148, 163, 184, 0.2);
+}
+
+.payg-label {
+  display: block;
+  font-size: 0.95rem;
+  color: #64748b;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.payg-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
 }
 
 .currency {
@@ -737,6 +997,15 @@ import { NCard, NButton, NAlert } from 'naive-ui';
 .feature-item strong {
   color: #1e293b;
   font-weight: 600;
+}
+
+.feature-item.disabled {
+  color: #94a3b8;
+  opacity: 0.7;
+}
+
+.feature-item.disabled strong {
+  color: #94a3b8;
 }
 
 .feature-item.warning {

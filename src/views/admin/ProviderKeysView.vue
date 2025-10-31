@@ -85,18 +85,15 @@
         <p>暂无密钥记录,点击右上角"新增密钥"开始配置。</p>
       </div>
 
-      <!-- 分页组件 -->
+      <!-- 分页组件 - 前端分页 -->
       <div v-if="total > 0" class="pagination-wrapper">
         <n-pagination
           v-model:page="currentPage"
           v-model:page-size="pageSize"
-          :page-count="totalPages"
           :item-count="total"
           :page-sizes="[10, 20, 50, 100]"
           show-size-picker
           show-quick-jumper
-          @update:page="handlePageChange"
-          @update:page-size="handlePageSizeChange"
         >
           <template #prefix="{ itemCount }">
             共 {{ itemCount }} 条
@@ -305,7 +302,7 @@ const message = useMessage();
 
 const loading = ref(false);
 const submitting = ref(false);
-const keys = ref([]); // 当前页显示的密钥
+const allKeys = ref([]); // 所有密钥数据
 const searchTerm = ref('');
 const levelFilter = ref(null);
 const providerFilter = ref(null);
@@ -318,10 +315,9 @@ const healthDialogVisible = ref(false);
 const checkingHealth = ref(false);
 const healthData = ref(null);
 
-// 分页相关
+// 前端分页相关
 const currentPage = ref(1);
 const pageSize = ref(20);
-const total = ref(0);
 
 const defaultForm = () => ({
   type: 'standard',
@@ -356,29 +352,61 @@ const drawerTitle = computed(() => (drawerMode.value === 'create' ? '新增 Prov
 
 // 从所有keys中提取唯一的level选项用于筛选器
 const levelOptions = computed(() => {
-  const levels = [...new Set(keys.value.map(k => k.level))].sort((a, b) => a - b);
+  const levels = [...new Set(allKeys.value.map(k => k.level))].sort((a, b) => a - b);
   return levels.map(level => ({ label: `Level ${level}`, value: level }));
 });
 
-// 从所有keys中提取唯一的provider选项用于筛选器
+// 前端筛选后的密钥列表
+const filteredKeys = computed(() => {
+  let result = [...allKeys.value];
+  
+  // 按 Level 筛选
+  if (levelFilter.value !== null && levelFilter.value !== undefined) {
+    result = result.filter(k => k.level === levelFilter.value);
+  }
+  
+  // 按 Provider 筛选
+  if (providerFilter.value) {
+    result = result.filter(k => k.provider === providerFilter.value);
+  }
+  
+  // 按搜索词筛选
+  if (searchTerm.value && searchTerm.value.trim()) {
+    const term = searchTerm.value.trim().toLowerCase();
+    result = result.filter(k => 
+      k.name?.toLowerCase().includes(term) || 
+      k.provider?.toLowerCase().includes(term)
+    );
+  }
+  
+  return result;
+});
+
+// 当前页显示的密钥
+const keys = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+  return filteredKeys.value.slice(start, end);
+});
+
+// 总数
+const total = computed(() => filteredKeys.value.length);
+
 const providerOptions = computed(() => {
-  const providers = [...new Set(keys.value.map(k => k.provider))].filter(Boolean);
+  const providers = [...new Set(allKeys.value.map(k => k.provider))].filter(Boolean);
   return providers.map(provider => ({
     label: provider,
     value: provider,
   }));
 });
 
-const totalPages = computed(() => Math.ceil(total.value / pageSize.value));
-
 onMounted(() => {
   fetchKeys();
 });
 
-// 监听筛选条件变化,重置到第一页并重新加载数据
+// 监听筛选条件变化,重置到第一页（前端分页，不需要重新加载数据）
 watch([levelFilter, providerFilter, searchTerm], () => {
   currentPage.value = 1;
-  fetchKeys();
 });
 
 function resetForm() {
@@ -400,24 +428,17 @@ function formatDateTime(dateStr) {
 async function fetchKeys() {
   loading.value = true;
   try {
+    // 前端分页：一次性获取所有数据
     const params = {
-      page: currentPage.value,
-      size: pageSize.value,
+      page: 1,
+      size: 9999, // 获取大量数据
     };
-
-    // 添加筛选参数 (根据接口文档)
-    if (levelFilter.value !== null && levelFilter.value !== undefined) {
-      params.level = levelFilter.value;
-    }
-    if (providerFilter.value) {
-      params.provider = providerFilter.value;
-    }
 
     const response = await listProviderKeys(params);
 
     // API直接返回数组,不是嵌套在data.keys中
     const list = Array.isArray(response.data) ? response.data : (response.data.keys || []);
-    keys.value = list.map((item) => ({
+    allKeys.value = list.map((item) => ({
       id: item.ID || item.id,
       name: item.Name || item.name || '--',
       provider: item.Provider || item.provider,
@@ -430,22 +451,10 @@ async function fetchKeys() {
       updatedAt: item.UpdatedAt || item.updated_at,
       raw: item,
     }));
-
-    // 处理分页信息 - 从 HTTP Headers 中获取
-    // 根据接口文档, 后端通过 X-Total-Count 返回总数
-    const headers = response.headers || {};
-    const totalCount = headers['x-total-count'] || headers['X-Total-Count'];
-    if (totalCount !== undefined) {
-      total.value = parseInt(totalCount, 10);
-    } else {
-      // 如果没有header,使用数组长度作为fallback
-      total.value = list.length;
-    }
   } catch (error) {
     const errorMessage = error?.response?.data?.message || error?.message || '加载密钥失败';
     message.error(errorMessage);
-    keys.value = [];
-    total.value = 0;
+    allKeys.value = [];
   } finally {
     loading.value = false;
   }
@@ -465,16 +474,7 @@ async function openHealthDialog() {
   }
 }
 
-function handlePageChange(page) {
-  currentPage.value = page;
-  fetchKeys(); // 后端分页模式,需要重新加载数据
-}
-
-function handlePageSizeChange(size) {
-  pageSize.value = size;
-  currentPage.value = 1;
-  fetchKeys(); // 后端分页模式,需要重新加载数据
-}
+// 前端分页：不需要重新加载数据
 
 function openCreateDrawer() {
   drawerMode.value = 'create';
